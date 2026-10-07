@@ -1,0 +1,7 @@
+# Dependências e builds (geradas com npm install / npm run dist)
+node_modules/
+dist/
+release/
+
+# macOS
+.DS_Store

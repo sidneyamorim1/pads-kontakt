@@ -1,0 +1,196 @@
+{ ============================================================ }
+{ BIBLIOTECA KONTAKT - CONTROLADOR DE 12 PADS                 }
+{ Grade responsiva: 4 colunas x 3 linhas                      }
+{ ============================================================ }
+
+on init
+  make_perfview
+  set_script_title("12-Pad Trigger Script")
+
+  { ---------- LAYOUT (altere aqui; a grade se recalcula) ---------- }
+  declare const $NUM_PADS := 12
+  declare const $COLS     := 4
+  declare const $ROWS     := 3
+  declare $ui_w   := 633   { largura padrao do Kontakt 5/6/7 }
+  declare $ui_h   := 400   { altura da interface (max. 750) }
+  declare $margin := 20    { margem externa }
+  declare $gap    := 12    { espaco entre os cards }
+  declare $header := 20    { espaco reservado no topo }
+
+  set_ui_height_px($ui_h)
+  { Kontakt 6+: descomente para usar outra largura (633 a 1000) }
+  { set_ui_width_px($ui_w) }
+
+  declare $pad_w
+  declare $pad_h
+  $pad_w := ($ui_w - 2 * $margin - ($COLS - 1) * $gap) / $COLS
+  $pad_h := ($ui_h - $header - 2 * $margin - ($ROWS - 1) * $gap) / $ROWS
+
+  { ---------- NOTAS MIDI: C1 (36) ate B1 (47) ---------- }
+  declare %pad_note[$NUM_PADS] := (36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47)
+
+  declare !pad_name[$NUM_PADS]
+  !pad_name[0]  := "1. KICK 808"
+  !pad_name[1]  := "2. SNARE"
+  !pad_name[2]  := "3. HIHAT FECHADO"
+  !pad_name[3]  := "4. HIHAT ABERTO"
+  !pad_name[4]  := "5. CLAP / RIM"
+  !pad_name[5]  := "6. PERC BELL"
+  !pad_name[6]  := "7. SYNTH STAB"
+  !pad_name[7]  := "8. VOX CHANT"
+  !pad_name[8]  := "9. PAD 9"
+  !pad_name[9]  := "10. PAD 10"
+  !pad_name[10] := "11. PAD 11"
+  !pad_name[11] := "12. PAD 12"
+
+  { ---------- CARDS ---------- }
+  declare ui_button $pad_1
+  declare ui_button $pad_2
+  declare ui_button $pad_3
+  declare ui_button $pad_4
+  declare ui_button $pad_5
+  declare ui_button $pad_6
+  declare ui_button $pad_7
+  declare ui_button $pad_8
+  declare ui_button $pad_9
+  declare ui_button $pad_10
+  declare ui_button $pad_11
+  declare ui_button $pad_12
+
+  declare %pad_id[$NUM_PADS]
+  %pad_id[0]  := get_ui_id($pad_1)
+  %pad_id[1]  := get_ui_id($pad_2)
+  %pad_id[2]  := get_ui_id($pad_3)
+  %pad_id[3]  := get_ui_id($pad_4)
+  %pad_id[4]  := get_ui_id($pad_5)
+  %pad_id[5]  := get_ui_id($pad_6)
+  %pad_id[6]  := get_ui_id($pad_7)
+  %pad_id[7]  := get_ui_id($pad_8)
+  %pad_id[8]  := get_ui_id($pad_9)
+  %pad_id[9]  := get_ui_id($pad_10)
+  %pad_id[10] := get_ui_id($pad_11)
+  %pad_id[11] := get_ui_id($pad_12)
+
+  { Posiciona os 12 cards na grade, linha por linha }
+  declare $i
+  $i := 0
+  while ($i < $NUM_PADS)
+    set_control_par_str(%pad_id[$i], $CONTROL_PAR_TEXT, !pad_name[$i])
+    set_control_par(%pad_id[$i], $CONTROL_PAR_POS_X, $margin + ($i mod $COLS) * ($pad_w + $gap))
+    set_control_par(%pad_id[$i], $CONTROL_PAR_POS_Y, $header + $margin + ($i / $COLS) * ($pad_h + $gap))
+    set_control_par(%pad_id[$i], $CONTROL_PAR_WIDTH, $pad_w)
+    set_control_par(%pad_id[$i], $CONTROL_PAR_HEIGHT, $pad_h)
+    inc($i)
+  end while
+
+  declare $click
+  declare $hit
+
+  message("Biblioteca de 12 Pads carregada com sucesso!")
+end on
+
+{ Toca o pad indicado em $click (clique com o mouse) }
+function pad_click
+  play_note(%pad_note[$click], 100, 0, 0)
+end function
+
+on note
+  ignore_event($EVENT_ID)
+  $hit := search(%pad_note, $EVENT_NOTE)
+  if ($hit # -1)
+    set_control_par(%pad_id[$hit], $CONTROL_PAR_VALUE, 1)
+    play_note($EVENT_NOTE, $EVENT_VELOCITY, 0, -1)
+  end if
+end on
+
+on release
+  $hit := search(%pad_note, $EVENT_NOTE)
+  if ($hit # -1)
+    set_control_par(%pad_id[$hit], $CONTROL_PAR_VALUE, 0)
+  end if
+end on
+
+{ ---------- CLIQUE NOS CARDS ---------- }
+on ui_control($pad_1)
+  $click := 0
+  call pad_click
+  wait(120000)
+  $pad_1 := 0
+end on
+
+on ui_control($pad_2)
+  $click := 1
+  call pad_click
+  wait(120000)
+  $pad_2 := 0
+end on
+
+on ui_control($pad_3)
+  $click := 2
+  call pad_click
+  wait(120000)
+  $pad_3 := 0
+end on
+
+on ui_control($pad_4)
+  $click := 3
+  call pad_click
+  wait(120000)
+  $pad_4 := 0
+end on
+
+on ui_control($pad_5)
+  $click := 4
+  call pad_click
+  wait(120000)
+  $pad_5 := 0
+end on
+
+on ui_control($pad_6)
+  $click := 5
+  call pad_click
+  wait(120000)
+  $pad_6 := 0
+end on
+
+on ui_control($pad_7)
+  $click := 6
+  call pad_click
+  wait(120000)
+  $pad_7 := 0
+end on
+
+on ui_control($pad_8)
+  $click := 7
+  call pad_click
+  wait(120000)
+  $pad_8 := 0
+end on
+
+on ui_control($pad_9)
+  $click := 8
+  call pad_click
+  wait(120000)
+  $pad_9 := 0
+end on
+
+on ui_control($pad_10)
+  $click := 9
+  call pad_click
+  wait(120000)
+  $pad_10 := 0
+end on
+
+on ui_control($pad_11)
+  $click := 10
+  call pad_click
+  wait(120000)
+  $pad_11 := 0
+end on
+
+on ui_control($pad_12)
+  $click := 11
+  call pad_click
+  wait(120000)
+  $pad_12 := 0
+end on

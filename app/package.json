@@ -1,0 +1,67 @@
+{
+  "name": "kontakt-12pad-sampler",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "app": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --mac --arm64",
+    "dist:universal": "npm run build && electron-builder --mac --universal",
+    "dist:intel": "npm run build && electron-builder --mac --x64"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/outfit": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.6.1",
+    "canvas-confetti": "^1.9.4",
+    "electron": "^44.6.0",
+    "electron-builder": "^26.15.3",
+    "lucide-react": "^0.344.0",
+    "postcss": "^8.5.29",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2"
+  },
+  "productName": "Kontakt 12-Pad Sampler",
+  "description": "Sampler de 12 pads com MIDI e gerador de script KSP para Kontakt",
+  "author": "Sid Amorim",
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.sidamorim.kontakt12pad",
+    "productName": "Kontakt 12-Pad Sampler",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "dir"
+        }
+      ],
+      "identity": null,
+      "extendInfo": {
+        "NSBluetoothAlwaysUsageDescription": "Para conectar controladores MIDI via Bluetooth."
+      }
+    }
+  }
+}
