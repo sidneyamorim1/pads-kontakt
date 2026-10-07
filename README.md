@@ -1,6 +1,6 @@
-# Kontakt 12-Pad Sampler
+# Sampler Studio
 
-App de desktop para macOS: 12 pads e 6 cards de áudio, com MIDI, presets e gerador de script KSP para o Kontakt.
+App de desktop para macOS com 12 pads, 6 cards de áudio que tocam até o fim, MIDI e presets.
 Feito em React + Vite e empacotado com Electron.
 
 ## Rodar e gerar o app
@@ -21,9 +21,7 @@ Os instaladores ficam em `app/release/`.
 
 | Pasta | Conteúdo |
 |---|---|
-| `app/src` | Interface React e motor de áudio |
+| `app/src` | Interface React, motor de áudio e presets |
 | `app/electron` | Processo principal do Electron (janela nativa e permissões de MIDI) |
-| `app/public` | Pacote da biblioteca Kontakt baixado pelo app |
-| `kontakt-library-package` | Script KSP e samples para montar o instrumento no Kontakt |
 
 O histórico e as pendências estão em `PROGRESSO.md`.

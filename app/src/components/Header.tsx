@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Code2, HelpCircle, Radio, Disc3, Volume2, FolderDown } from 'lucide-react';
+import { Radio, Disc3, Volume2 } from 'lucide-react';
 import { SoundKit } from '../data/soundKits';
 
 interface HeaderProps {
@@ -9,8 +9,6 @@ interface HeaderProps {
   midiConnected: boolean;
   midiDeviceName: string | null;
   onRequestMidiAccess: () => void;
-  onOpenKspModal: () => void;
-  onOpenTutorialModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,12 +17,13 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectKit,
   midiConnected,
   midiDeviceName,
-  onRequestMidiAccess,
-  onOpenKspModal,
-  onOpenTutorialModal
+  onRequestMidiAccess
 }) => {
   return (
-    <header className="w-full glass-panel border-b border-white/10 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-40">
+    <header className="w-full glass-panel border-b border-white/10 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-40"
+      // padding inline: o reset `* { padding: 0 }` do index.css anula as classes px/py do Tailwind
+      style={{ padding: '10px 24px' }}
+    >
       {/* Brand & Logo */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
@@ -32,10 +31,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            Kontakt <span className="text-amber-500">8-Pad</span> Sampler Studio
+            Sampler <span className="text-amber-500">Studio</span>
           </h1>
           <p className="text-xs text-gray-400 font-mono">
-            Controlador VST & Gerador KSP para Kontakt
+            12 pads · 6 áudios · MIDI
           </p>
         </div>
       </div>
@@ -79,33 +78,6 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap items-center gap-2">
-        <a
-          href="./Kontakt_8Pad_Library_Package.zip"
-          download="Kontakt_8Pad_Library_Package.zip"
-          className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-bold px-4 py-2 rounded-lg text-sm transition-all shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer"
-        >
-          <FolderDown className="w-4 h-4" />
-          <span>Baixar Pacote Kontakt (.zip)</span>
-        </a>
-
-        <button
-          onClick={onOpenKspModal}
-          className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black font-semibold px-4 py-2 rounded-lg text-sm transition-all shadow-md shadow-orange-500/20 active:scale-95 cursor-pointer"
-        >
-          <Code2 className="w-4 h-4" />
-          <span>Gerar Script KSP</span>
-        </button>
-
-        <button
-          onClick={onOpenTutorialModal}
-          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-white/10 px-3.5 py-2 rounded-lg text-sm transition-all active:scale-95 cursor-pointer"
-        >
-          <HelpCircle className="w-4 h-4 text-cyan-400" />
-          <span className="hidden sm:inline">Guia Kontakt</span>
-        </button>
-      </div>
     </header>
   );
 };

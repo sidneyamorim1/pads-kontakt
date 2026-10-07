@@ -119,3 +119,18 @@ Precisa do macOS 13 (Ventura) ou mais novo. O iMac 2019 aceita até o Sequoia (1
 - Código: `playFull` em `audioEngine.ts`, `SIDE_PADS` em `soundKits.ts` e o painel em `PadHardware.tsx`.
 - **Parar áudios:** cada card tem o botão "■ Parar", que só fica ativo enquanto o áudio toca. No topo do painel há o "Parar todos". O fade de saída é de 40 ms, sem estalo. Testado.
 - **Correção:** os cards Áudio 2, 3, 4 e 6 tinham pitch +3/+5/+7/+5, e o áudio carregado tocava acelerado. Agora o pitch é 0 em todos. Sessões e presets antigos são corrigidos ao abrir.
+
+---
+
+## 07/10/2026 — Kontakt removido; o app agora se chama "Sampler Studio"
+
+O app não depende mais do Kontakt. Foram removidos:
+- os botões "Baixar Pacote Kontakt", "Gerar Script KSP" e "Guia Kontakt";
+- o gerador KSP (`kspGenerator.ts`, `KspModal.tsx`, `TutorialModal.tsx`);
+- `app/public/` (o .zip e os samples), `app/scripts/` e a pasta `kontakt-library-package/`.
+
+As seções acima que falam de KSP e Kontakt ficaram só como histórico. Tudo pode ser recuperado no git (commit `4685334`).
+
+- **Nome:** "Sampler Studio" (`productName`). Os instaladores são `Sampler Studio-1.0.0.dmg` (Intel) e `Sampler Studio-1.0.0-arm64.dmg`.
+- **Dados:** o app continua usando a pasta `~/Library/Application Support/Kontakt 12-Pad Sampler`, para não perder presets e samples (ver `electron/main.cjs`).
+- **Topo:** ganhou margem lateral com `style` inline. O reset `* { padding: 0 }` do `index.css` anula as classes `px/py` do Tailwind em todo o app. Corrigir o reset mudaria o espaçamento de tudo, por isso não foi feito.

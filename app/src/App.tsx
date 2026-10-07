@@ -5,8 +5,6 @@ import { PadData, audioEngine } from './utils/audioEngine';
 import { Header } from './components/Header';
 import { PadHardware } from './components/PadHardware';
 import { PadEditor } from './components/PadEditor';
-import { KspModal } from './components/KspModal';
-import { TutorialModal } from './components/TutorialModal';
 import { PresetBar } from './components/PresetBar';
 import { Preset, StoredPad, SESSION_ID, presetStore, toStoredPads } from './utils/presetStore';
 
@@ -43,9 +41,6 @@ export function App() {
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState<boolean>(false);
 
-  // Modals
-  const [isKspModalOpen, setIsKspModalOpen] = useState<boolean>(false);
-  const [isTutorialModalOpen, setIsTutorialModalOpen] = useState<boolean>(false);
 
   // Handle kit selection
   const handleSelectKit = (kitId: string) => {
@@ -305,8 +300,6 @@ export function App() {
         midiConnected={midiConnected}
         midiDeviceName={midiDeviceName}
         onRequestMidiAccess={requestMidiAccess}
-        onOpenKspModal={() => setIsKspModalOpen(true)}
-        onOpenTutorialModal={() => setIsTutorialModalOpen(true)}
       />
 
       {/* Main Content Area: Side-by-Side DAW Console */}
@@ -342,17 +335,6 @@ export function App() {
         </div>
       </main>
 
-      {/* Modals */}
-      <KspModal
-        isOpen={isKspModalOpen}
-        onClose={() => setIsKspModalOpen(false)}
-        pads={pads.slice(0, 12)}
-      />
-
-      <TutorialModal
-        isOpen={isTutorialModalOpen}
-        onClose={() => setIsTutorialModalOpen(false)}
-      />
     </div>
   );
 }

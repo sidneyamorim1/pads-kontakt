@@ -1,5 +1,5 @@
 {
-  "name": "kontakt-12pad-sampler",
+  "name": "sampler-studio",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -33,13 +33,13 @@
     "typescript": "^5.5.3",
     "vite": "^5.4.2"
   },
-  "productName": "Kontakt 12-Pad Sampler",
-  "description": "Sampler de 12 pads com MIDI e gerador de script KSP para Kontakt",
+  "productName": "Sampler Studio",
+  "description": "Sampler de 12 pads e 6 cards de áudio com MIDI e presets",
   "author": "Sid Amorim",
   "main": "electron/main.cjs",
   "build": {
-    "appId": "com.sidamorim.kontakt12pad",
-    "productName": "Kontakt 12-Pad Sampler",
+    "appId": "com.sidamorim.samplerstudio",
+    "productName": "Sampler Studio",
     "directories": {
       "output": "release"
     },

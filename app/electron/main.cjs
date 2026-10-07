@@ -2,8 +2,13 @@
 const { app, BrowserWindow, session, shell, Menu } = require('electron');
 const path = require('path');
 
-// Permissões que o app usa: Web MIDI (controlador USB) e área de transferência (copiar KSP).
-const ALLOWED_PERMISSIONS = new Set(['midi', 'midiSysex', 'clipboard-sanitized-write', 'clipboard-read']);
+// Permissões que o app usa: Web MIDI (controlador USB).
+const ALLOWED_PERMISSIONS = new Set(['midi', 'midiSysex']);
+
+// Mantém a pasta de dados do nome antigo do app, para não perder presets e samples já salvos.
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'Kontakt 12-Pad Sampler'));
+}
 
 // Áudio deve tocar no primeiro clique/tecla/nota MIDI, sem exigir gesto prévio.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -14,7 +19,7 @@ function createWindow() {
     height: 860,
     minWidth: 900,
     minHeight: 640,
-    title: 'Kontakt 12-Pad Sampler',
+    title: 'Sampler Studio',
     backgroundColor: '#0c0d10',
     titleBarStyle: 'default',
     show: false,
