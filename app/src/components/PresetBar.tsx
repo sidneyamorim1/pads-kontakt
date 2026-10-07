@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Save, SaveAll, Trash2, Bookmark, Check, X } from 'lucide-react';
 import { Preset } from '../utils/presetStore';
-import { CONTROLLER_MAX_WIDTH } from './PadHardware';
 
 interface PresetBarProps {
   presets: Preset[];
@@ -30,8 +29,7 @@ export const PresetBar: React.FC<PresetBarProps> = ({ presets, activePresetId, d
 
   return (
     <div
-      className="w-full mx-auto flex flex-wrap items-center gap-2 glass-panel border border-white/10 rounded-xl px-3 py-2"
-      style={{ maxWidth: CONTROLLER_MAX_WIDTH }}
+      className="w-full flex flex-wrap items-center gap-2 glass-panel border border-white/10 rounded-xl px-3 py-2"
     >
       <Bookmark className="w-4 h-4 text-amber-500" />
       <span className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Preset:</span>

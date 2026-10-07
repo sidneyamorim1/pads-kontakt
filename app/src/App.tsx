@@ -293,7 +293,7 @@ export function App() {
   const selectedPad = pads.find(p => p.id === selectedPadId) || pads[0];
 
   return (
-    <div className="min-h-screen flex flex-col justify-between pb-12">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <Header
         soundKits={SOUND_KITS}
@@ -305,7 +305,8 @@ export function App() {
       />
 
       {/* Main Content Area: Side-by-Side DAW Console */}
-      <main className="flex-1 px-6 py-4 w-full flex flex-col gap-4 items-center">
+      {/* Ocupa toda a janela abaixo do topo; padding inline porque o reset do index.css anula px/py */}
+      <main className="flex-1 min-h-0 w-full flex flex-col gap-3 items-stretch" style={{ padding: '10px 16px 16px' }}>
         <PresetBar
           presets={presets}
           activePresetId={activePresetId}

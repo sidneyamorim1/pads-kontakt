@@ -2,9 +2,6 @@ import React, { useRef } from 'react';
 import { PadData } from '../utils/audioEngine';
 import { Music, Upload, MousePointerClick, PlayCircle, Square } from 'lucide-react';
 
-// Largura máxima do conjunto (4 colunas de pads + 3 de cards); a altura da janela limita para as 3 linhas caberem
-export const CONTROLLER_MAX_WIDTH = 'clamp(20rem, calc((100vh - 400px) * 2.8), 105rem)';
-
 // Ordem na tela (3 colunas x 3 linhas): os cards 7, 8 e 9 (ids 19-21) ocupam a 3ª coluna
 const SIDE_LAYOUT = [13, 14, 19, 15, 16, 20, 17, 18, 21];
 
@@ -73,7 +70,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
         onClick={() => onSelectPad(pad)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(pad.id, e)}
-        className={`min-w-0 flex flex-col items-center p-1 sm:p-2 rounded-xl transition-all cursor-pointer relative group border ${
+        className={`min-w-0 min-h-0 flex flex-col items-center p-1 sm:p-2 rounded-xl transition-all cursor-pointer relative group border ${
           isSelected ? selectedBorder : idleBorder
         }`}
       >
@@ -93,7 +90,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
         <div className="w-full flex justify-between items-center mb-1.5 px-1">
           <div className="flex items-center gap-1.5">
             <span className={`led-indicator ${isActive ? 'active' : isSelected ? 'amber' : ''}`} />
-            <span className={`text-[11px] font-mono font-bold ${side ? 'text-fuchsia-200' : 'text-gray-200'}`}>
+            <span className={`text-[11px] font-mono font-bold whitespace-nowrap ${side ? 'text-fuchsia-200' : 'text-gray-200'}`}>
               {side ? `ÁUDIO ${pad.id - 12}` : `PAD ${pad.id}`}
             </span>
           </div>
@@ -112,7 +109,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
               className="px-1.5 py-0.5 rounded transition-colors border flex items-center gap-1 text-[9px] font-mono bg-red-500/15 hover:bg-red-500/35 text-red-300 border-red-500/40 disabled:opacity-25 disabled:cursor-default disabled:hover:bg-red-500/15"
             >
               <Square className="w-2.5 h-2.5 fill-current" />
-              <span className="hidden sm:inline">Parar</span>
+              <span className="hidden xl:inline">Parar</span>
             </button>
           )}
 
@@ -127,7 +124,8 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             className={`px-1.5 py-0.5 rounded transition-colors border flex items-center gap-1 text-[9px] font-mono ${uploadStyle}`}
           >
             <Upload className="w-3 h-3" />
-            <span className="hidden sm:inline">Som</span>
+            {/* Nos cards laterais o texto só aparece em janelas largas (senão não cabe ao lado do Parar) */}
+            <span className={side ? 'hidden xl:inline' : 'hidden sm:inline'}>Som</span>
           </button>
           </div>
         </div>
@@ -140,7 +138,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             onSelectPad(pad);
             onTriggerPad(pad);
           }}
-          className={`w-full aspect-[4/3] rounded-xl pad-button flex flex-col items-center justify-between p-1.5 sm:p-3 transition-all cursor-pointer active:scale-95 ${
+          className={`w-full flex-1 min-h-0 rounded-xl pad-button flex flex-col items-center justify-between p-1.5 sm:p-3 transition-all cursor-pointer active:scale-95 ${
             isActive ? 'active shadow-cyan-500/40' : ''
           }`}
           style={{
@@ -199,8 +197,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
 
   return (
     <div
-      className="w-full mx-auto flex items-stretch gap-3"
-      style={{ maxWidth: CONTROLLER_MAX_WIDTH }}
+      className="w-full flex-1 min-h-0 flex items-stretch gap-3"
     >
       {/* Chassis Frame */}
       <div className="flex-[4] min-w-0 controller-frame rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-2xl relative border border-white/10 overflow-hidden">
@@ -218,7 +215,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
         </div>
 
         {/* 12 Pads Grid: sempre 4 colunas x 3 linhas */}
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-3 my-1">
+        <div className="flex-1 min-h-0 grid grid-cols-4 grid-rows-3 gap-1.5 sm:gap-3 my-1">
           {mainPads.map(pad => renderPad(pad, false))}
         </div>
 
@@ -249,7 +246,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 my-1">
+          <div className="flex-1 min-h-0 grid grid-cols-3 grid-rows-3 gap-1.5 sm:gap-3 my-1">
             {sidePads.map(pad => renderPad(pad, true))}
           </div>
         </div>
