@@ -9,13 +9,14 @@ export interface SoundKit {
 
 // 6 cards laterais (ids 13 a 18): tocam o áudio inteiro e reiniciam ao clicar de novo.
 // Sem sample carregado, usam o som sintetizado da categoria.
-const SIDE_PAD_DEFAULTS: Pick<PadData, 'name' | 'category' | 'pitch'>[] = [
-  { name: 'Áudio 1', category: 'synth', pitch: 0 },
-  { name: 'Áudio 2', category: 'synth', pitch: 3 },
-  { name: 'Áudio 3', category: 'synth', pitch: 5 },
-  { name: 'Áudio 4', category: 'synth', pitch: 7 },
-  { name: 'Áudio 5', category: 'fx', pitch: 0 },
-  { name: 'Áudio 6', category: 'fx', pitch: 5 },
+// Pitch sempre 0: qualquer transposição muda a velocidade do áudio carregado.
+const SIDE_PAD_DEFAULTS: Pick<PadData, 'name' | 'category'>[] = [
+  { name: 'Áudio 1', category: 'synth' },
+  { name: 'Áudio 2', category: 'perc' },
+  { name: 'Áudio 3', category: 'synth' },
+  { name: 'Áudio 4', category: 'perc' },
+  { name: 'Áudio 5', category: 'fx' },
+  { name: 'Áudio 6', category: 'fx' },
 ];
 const SIDE_PAD_KEYS = ['t', 'y', 'g', 'h', 'b', 'n'];
 const SIDE_PAD_COLORS = ['#e879f9', '#c084fc', '#f472b6', '#a78bfa', '#fb7185', '#d946ef'];
@@ -23,6 +24,7 @@ const SIDE_PAD_COLORS = ['#e879f9', '#c084fc', '#f472b6', '#a78bfa', '#fb7185', 
 export const SIDE_PADS: PadData[] = SIDE_PAD_DEFAULTS.map((d, i) => ({
   ...d,
   id: 13 + i,
+  pitch: 0,
   midiNote: 48 + i, // C2 a F2
   keyTrigger: SIDE_PAD_KEYS[i],
   volume: 85,
@@ -35,10 +37,12 @@ export const SIDE_PADS: PadData[] = SIDE_PAD_DEFAULTS.map((d, i) => ({
   playToEnd: true,
 }));
 
-// Sessões e presets salvos antes dos cards laterais só têm 12 pads: completa com os 6 padrão
+// Sessões e presets salvos antes dos cards laterais só têm 12 pads: completa com os 6 padrão.
+// Também zera o pitch dos cards salvos com a transposição antiga (deixava o áudio acelerado).
 export function withSidePads(pads: PadData[]): PadData[] {
-  const missing = SIDE_PADS.filter(sp => !pads.some(p => p.id === sp.id));
-  return [...pads, ...missing];
+  const fixed = pads.map(p => (p.playToEnd && p.pitch !== 0 ? { ...p, pitch: 0 } : p));
+  const missing = SIDE_PADS.filter(sp => !fixed.some(p => p.id === sp.id));
+  return [...fixed, ...missing];
 }
 
 export const SOUND_KITS: SoundKit[] = [

@@ -118,3 +118,4 @@ Precisa do macOS 13 (Ventura) ou mais novo. O iMac 2019 aceita até o Sequoia (1
 - Os 12 pads continuam como eram. O script KSP continua gerado só com os 12.
 - Código: `playFull` em `audioEngine.ts`, `SIDE_PADS` em `soundKits.ts` e o painel em `PadHardware.tsx`.
 - **Parar áudios:** cada card tem o botão "■ Parar", que só fica ativo enquanto o áudio toca. No topo do painel há o "Parar todos". O fade de saída é de 40 ms, sem estalo. Testado.
+- **Correção:** os cards Áudio 2, 3, 4 e 6 tinham pitch +3/+5/+7/+5, e o áudio carregado tocava acelerado. Agora o pitch é 0 em todos. Sessões e presets antigos são corrigidos ao abrir.
