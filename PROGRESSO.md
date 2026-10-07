@@ -154,3 +154,9 @@ As seções acima que falam de KSP e Kontakt ficaram só como histórico. Tudo p
 - Os botões ficam na mesma posição da tela: Áudio 7, 8 e 9 na 3ª coluna (GP14, GP17 e GP20).
 - O código compila sem erros com o core rp2040 5.7.0, a Adafruit TinyUSB 3.7.7 e a MIDI Library 5.0.2. **Ainda não foi testado numa placa de verdade.**
 - Próximas ideias: botão "parar áudios", potenciômetros de volume (GP26 a GP28 são analógicos) e LEDs nos cards. Essas exigem mudanças no app.
+
+### Próximo passo (pendente): LEDs no controlador
+Discutido em 07/10/2026. **Por enquanto o controlador fica sem LEDs e sem integração com o app.**
+- Opção recomendada: botões arcade translúcidos de 30 mm, com um LED RGB WS2812 dentro de cada um. Os 21 LEDs ficam em cadeia, ligados num pino só (ex.: GP22) e alimentados pelo VBUS de 5 V, com o brilho limitado no código por causa da corrente do USB. Cada botão acende na cor do pad da tela.
+- Comportamento sugerido: o app manda MIDI de volta para a placa ("Sampler Studio Pads"). Os pads piscam a cada disparo, e os cards de áudio ficam acesos enquanto tocam. Para isso, o app precisa enviar MIDI out.
+- Alternativa: botões com LED embutido de **5 V** (não 12 V). Exigem 21 fios extras e 3 chips 74HCT595 ou drivers.
