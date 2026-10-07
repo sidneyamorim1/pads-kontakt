@@ -260,8 +260,10 @@ export function App() {
       'q': 1, 'w': 2, 'e': 3, 'r': 4,
       'a': 5, 's': 6, 'd': 7, 'f': 8,
       'z': 9, 'x': 10, 'c': 11, 'v': 12,
-      // 6 cards laterais (à direita de R/F/V no teclado)
-      't': 13, 'y': 14, 'g': 15, 'h': 16, 'b': 17, 'n': 18
+      // 9 cards laterais (à direita de R/F/V no teclado)
+      't': 13, 'y': 14, 'u': 19,
+      'g': 15, 'h': 16, 'j': 20,
+      'b': 17, 'n': 18, 'm': 21
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {

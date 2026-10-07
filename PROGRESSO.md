@@ -134,3 +134,5 @@ As seções acima que falam de KSP e Kontakt ficaram só como histórico. Tudo p
 - **Nome:** "Sampler Studio" (`productName`). Os instaladores são `Sampler Studio-1.0.0.dmg` (Intel) e `Sampler Studio-1.0.0-arm64.dmg`.
 - **Dados:** o app continua usando a pasta `~/Library/Application Support/Kontakt 12-Pad Sampler`, para não perder presets e samples (ver `electron/main.cjs`).
 - **Topo:** ganhou margem lateral com `style` inline. O reset `* { padding: 0 }` do `index.css` anula as classes `px/py` do Tailwind em todo o app. Corrigir o reset mudaria o espaçamento de tudo, por isso não foi feito.
+- **Frases removidas:** "Clique nos pads para disparar…" (rodapé dos 12 pads) e "Toca até o fim · clicar de novo reinicia" (painel Áudios).
+- **9 cards de áudio** em 3×3 (ids 13 a 21). Os novos Áudio 7, 8 e 9 ficam na 3ª coluna, com as teclas U / J / M e as notas MIDI 54 a 56. A ordem na tela está em `SIDE_LAYOUT` (`PadHardware.tsx`). Os pads continuam com 158×118 px. Para isso, o conjunto ficou mais largo (`CONTROLLER_MAX_WIDTH`) e a janela abre com 1400 px.

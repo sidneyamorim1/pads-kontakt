@@ -1,6 +1,6 @@
 # Sampler Studio
 
-App de desktop para macOS com 12 pads, 6 cards de áudio que tocam até o fim, MIDI e presets.
+App de desktop para macOS com 12 pads, 9 cards de áudio que tocam até o fim, MIDI e presets.
 Feito em React + Vite e empacotado com Electron.
 
 ## Rodar e gerar o app

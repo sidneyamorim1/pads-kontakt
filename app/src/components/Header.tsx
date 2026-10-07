@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
             Sampler <span className="text-amber-500">Studio</span>
           </h1>
           <p className="text-xs text-gray-400 font-mono">
-            12 pads · 6 áudios · MIDI
+            12 pads · 9 áudios · MIDI
           </p>
         </div>
       </div>

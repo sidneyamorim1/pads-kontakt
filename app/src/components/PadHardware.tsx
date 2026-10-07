@@ -1,9 +1,12 @@
 import React, { useRef } from 'react';
 import { PadData } from '../utils/audioEngine';
-import { Music, Upload, MousePointerClick, Sparkles, PlayCircle, Square } from 'lucide-react';
+import { Music, Upload, MousePointerClick, PlayCircle, Square } from 'lucide-react';
 
-// Largura máxima do conjunto (12 pads + 6 cards laterais); a altura da janela limita para as 3 linhas caberem
-export const CONTROLLER_MAX_WIDTH = 'clamp(20rem, calc((100vh - 400px) * 2.4), 90rem)';
+// Largura máxima do conjunto (4 colunas de pads + 3 de cards); a altura da janela limita para as 3 linhas caberem
+export const CONTROLLER_MAX_WIDTH = 'clamp(20rem, calc((100vh - 400px) * 2.8), 105rem)';
+
+// Ordem na tela (3 colunas x 3 linhas): os cards 7, 8 e 9 (ids 19-21) ocupam a 3ª coluna
+const SIDE_LAYOUT = [13, 14, 19, 15, 16, 20, 17, 18, 21];
 
 interface PadHardwareProps {
   pads: PadData[];
@@ -48,7 +51,9 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
   };
 
   const mainPads = pads.filter(p => !p.playToEnd).slice(0, 12);
-  const sidePads = pads.filter(p => p.playToEnd).slice(0, 6);
+  const sidePads = SIDE_LAYOUT
+    .map(id => pads.find(p => p.id === id && p.playToEnd))
+    .filter((p): p is PadData => !!p);
 
   // `side` = card lateral (toca até o fim): acende enquanto o áudio toca e usa a cor rosa/violeta
   const renderPad = (pad: PadData, side: boolean) => {
@@ -198,7 +203,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
       style={{ maxWidth: CONTROLLER_MAX_WIDTH }}
     >
       {/* Chassis Frame */}
-      <div className="flex-[2] min-w-0 controller-frame rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-2xl relative border border-white/10 overflow-hidden">
+      <div className="flex-[4] min-w-0 controller-frame rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-2xl relative border border-white/10 overflow-hidden">
         {/* Top Chassis Header */}
         <div className="flex justify-between items-center text-xs text-gray-400 font-mono tracking-wider border-b border-white/5 pb-2">
           <div className="flex items-center gap-2">
@@ -218,11 +223,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
         </div>
 
         {/* Chassis Footer Label */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-1 text-xs text-gray-400 pt-2 border-t border-white/5 font-mono">
-          <span className="flex items-center gap-1.5 text-gray-300">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Clique nos pads para disparar | Arraste arquivos de som diretamente para os pads</span>
-          </span>
+        <div className="flex justify-end items-center gap-1 text-xs text-gray-400 pt-2 border-t border-white/5 font-mono">
           <span className="text-gray-400">
             12 Pads Autônomos
           </span>
@@ -231,7 +232,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
 
       {/* Painel lateral: 6 cards que tocam o áudio inteiro (clicar de novo reinicia) */}
       {sidePads.length > 0 && (
-        <div className="flex-1 min-w-0 rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-2xl border border-fuchsia-500/30 bg-gradient-to-b from-fuchsia-950/40 to-[#120c18]">
+        <div className="flex-[3] min-w-0 rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-2xl border border-fuchsia-500/30 bg-gradient-to-b from-fuchsia-950/40 to-[#120c18]">
           <div className="flex justify-between items-center text-xs font-mono tracking-wider border-b border-fuchsia-500/15 pb-2">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-fuchsia-400 animate-pulse"></span>
@@ -248,12 +249,8 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 sm:gap-3 my-1">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 my-1">
             {sidePads.map(pad => renderPad(pad, true))}
-          </div>
-
-          <div className="text-xs text-fuchsia-300/80 pt-2 border-t border-fuchsia-500/15 font-mono text-center">
-            Toca até o fim · clicar de novo reinicia
           </div>
         </div>
       )}

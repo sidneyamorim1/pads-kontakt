@@ -7,7 +7,7 @@ export interface SoundKit {
   pads: PadData[];
 }
 
-// 6 cards laterais (ids 13 a 18): tocam o áudio inteiro e reiniciam ao clicar de novo.
+// 9 cards laterais (ids 13 a 21): tocam o áudio inteiro e reiniciam ao clicar de novo.
 // Sem sample carregado, usam o som sintetizado da categoria.
 // Pitch sempre 0: qualquer transposição muda a velocidade do áudio carregado.
 const SIDE_PAD_DEFAULTS: Pick<PadData, 'name' | 'category'>[] = [
@@ -17,15 +17,19 @@ const SIDE_PAD_DEFAULTS: Pick<PadData, 'name' | 'category'>[] = [
   { name: 'Áudio 4', category: 'perc' },
   { name: 'Áudio 5', category: 'fx' },
   { name: 'Áudio 6', category: 'fx' },
+  { name: 'Áudio 7', category: 'synth' },
+  { name: 'Áudio 8', category: 'perc' },
+  { name: 'Áudio 9', category: 'fx' },
 ];
-const SIDE_PAD_KEYS = ['t', 'y', 'g', 'h', 'b', 'n'];
-const SIDE_PAD_COLORS = ['#e879f9', '#c084fc', '#f472b6', '#a78bfa', '#fb7185', '#d946ef'];
+// Áudio 7, 8 e 9 ficam na 3ª coluna: teclas U / J / M (à direita de Y / H / N)
+const SIDE_PAD_KEYS = ['t', 'y', 'g', 'h', 'b', 'n', 'u', 'j', 'm'];
+const SIDE_PAD_COLORS = ['#e879f9', '#c084fc', '#f472b6', '#a78bfa', '#fb7185', '#d946ef', '#f0abfc', '#818cf8', '#f9a8d4'];
 
 export const SIDE_PADS: PadData[] = SIDE_PAD_DEFAULTS.map((d, i) => ({
   ...d,
   id: 13 + i,
   pitch: 0,
-  midiNote: 48 + i, // C2 a F2
+  midiNote: 48 + i, // C2 a G#2
   keyTrigger: SIDE_PAD_KEYS[i],
   volume: 85,
   pan: 0,
@@ -37,7 +41,7 @@ export const SIDE_PADS: PadData[] = SIDE_PAD_DEFAULTS.map((d, i) => ({
   playToEnd: true,
 }));
 
-// Sessões e presets salvos antes dos cards laterais só têm 12 pads: completa com os 6 padrão.
+// Sessões e presets salvos antes têm menos cards: completa com os cards padrão que faltam.
 // Também zera o pitch dos cards salvos com a transposição antiga (deixava o áudio acelerado).
 export function withSidePads(pads: PadData[]): PadData[] {
   const fixed = pads.map(p => (p.playToEnd && p.pitch !== 0 ? { ...p, pitch: 0 } : p));

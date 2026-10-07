@@ -15,7 +15,7 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1280,
+    width: 1400,
     height: 860,
     minWidth: 900,
     minHeight: 640,
