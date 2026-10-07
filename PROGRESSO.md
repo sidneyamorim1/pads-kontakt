@@ -147,3 +147,10 @@ As seções acima que falam de KSP e Kontakt ficaram só como histórico. Tudo p
 - Motor (`audioEngine.ts`): cada grupo passa por volume do grupo → canais escolhidos → volume geral → dispositivo. Cada grupo tem o seu reverb. O analyser, que não era usado, saiu.
 - Electron: a verificação de permissão `media` e `speaker-selection` foi liberada para mostrar o nome das placas. O microfone continua bloqueado.
 - **Testado:** canais 1-2, só 1, só 2, volume por grupo, volume geral, troca de dispositivo e configuração salva entre aberturas. **Não testado:** placa com mais de 2 canais (nenhuma conectada neste Mac). O código usa `destination.maxChannelCount`.
+
+## 07/10/2026 — Controlador físico (Raspberry Pi Pico + 21 botões arcade)
+- Pasta `controlador-arduino/`: firmware (`SamplerStudioPads/SamplerStudioPads.ino`), arquivo pronto para gravar (`SamplerStudioPads.uf2`) e guia (`README.md`) com lista de compras, ligação pino a pino, gravação e testes.
+- A placa vira um MIDI USB, "Sampler Studio Pads", que manda as notas 36 a 47 (pads) e 48 a 56 (áudios). **O app não precisou de mudança.**
+- Os botões ficam na mesma posição da tela: Áudio 7, 8 e 9 na 3ª coluna (GP14, GP17 e GP20).
+- O código compila sem erros com o core rp2040 5.7.0, a Adafruit TinyUSB 3.7.7 e a MIDI Library 5.0.2. **Ainda não foi testado numa placa de verdade.**
+- Próximas ideias: botão "parar áudios", potenciômetros de volume (GP26 a GP28 são analógicos) e LEDs nos cards. Essas exigem mudanças no app.

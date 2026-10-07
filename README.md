@@ -23,5 +23,6 @@ Os instaladores ficam em `app/release/`.
 |---|---|
 | `app/src` | Interface React, motor de áudio e presets |
 | `app/electron` | Processo principal do Electron (janela nativa e permissões de MIDI) |
+| `controlador-arduino` | Controlador físico de 21 botões (Raspberry Pi Pico): código, arquivo pronto para gravar e guia de montagem |
 
 O histórico e as pendências estão em `PROGRESSO.md`.
