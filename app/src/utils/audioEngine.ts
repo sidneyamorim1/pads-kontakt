@@ -26,12 +26,28 @@ interface FullVoice {
   timer?: number;
 }
 
+// Grupos de saída: os 12 pads e os cards de áudio podem ir para canais diferentes da placa/mesa
+export type BusName = 'pads' | 'audios';
+
+// Canal de saída: `first` é o índice (0 = saída 1); estéreo usa `first` e `first + 1`
+export interface ChannelRoute {
+  first: number;
+  stereo: boolean;
+}
+
+interface Bus {
+  input: GainNode;            // volume do grupo
+  reverb: ConvolverNode;      // retorno de reverb do grupo
+  splitter: ChannelSplitterNode;
+  mono: GainNode;             // soma L+R para saída em um canal só
+  route: ChannelRoute;
+}
 
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private analyser: AnalyserNode | null = null;
-  private reverbNode: ConvolverNode | null = null;
+  private merger: ChannelMergerNode | null = null;
+  private buses: Record<BusName, Bus> | null = null;
   private reversedCache: WeakMap<AudioBuffer, AudioBuffer> = new WeakMap();
   private fullVoices: Map<number, FullVoice> = new Map();
   private playingListener: ((padId: number, playing: boolean) => void) | null = null;
@@ -75,22 +91,91 @@ class AudioEngine {
 
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.value = 0.85;
-
-    this.analyser = this.ctx.createAnalyser();
-    this.analyser.fftSize = 64;
+    this.masterGain.connect(this.ctx.destination);
 
     // Create simple impulse response for reverb
-    this.reverbNode = this.ctx.createConvolver();
-    this.reverbNode.buffer = this.createImpulseResponse(1.8, 2.0);
+    const impulse = this.createImpulseResponse(1.8, 2.0);
+    const makeBus = (): Bus => {
+      const ctx = this.ctx!;
+      const input = ctx.createGain();
+      const reverb = ctx.createConvolver();
+      reverb.buffer = impulse;
+      const reverbGain = ctx.createGain();
+      reverbGain.gain.value = 0.3;
+      reverb.connect(reverbGain);
+      reverbGain.connect(input);
 
-    const reverbGain = this.ctx.createGain();
-    reverbGain.gain.value = 0.3;
+      const splitter = ctx.createChannelSplitter(2);
+      const mono = ctx.createGain();
+      mono.channelCount = 1;
+      mono.channelCountMode = 'explicit';
+      mono.channelInterpretation = 'speakers';
+      input.connect(splitter);
+      input.connect(mono);
+      return { input, reverb, splitter, mono, route: { first: 0, stereo: true } };
+    };
+    this.buses = { pads: makeBus(), audios: makeBus() };
+    this.buildOutput();
+  }
 
-    this.reverbNode.connect(reverbGain);
-    reverbGain.connect(this.masterGain);
+  // Monta a saída com todos os canais do dispositivo atual e liga cada grupo no seu canal
+  private buildOutput() {
+    const ctx = this.ctx!;
+    this.merger?.disconnect();
+    const channels = Math.max(2, ctx.destination.maxChannelCount);
+    ctx.destination.channelCount = channels;
+    ctx.destination.channelCountMode = 'explicit';
+    ctx.destination.channelInterpretation = 'discrete';
+    this.merger = ctx.createChannelMerger(channels);
+    this.merger.connect(this.masterGain!);
+    for (const bus of Object.values(this.buses!)) this.connectBus(bus);
+  }
 
-    this.masterGain.connect(this.analyser);
-    this.analyser.connect(this.ctx.destination);
+  private connectBus(bus: Bus) {
+    const channels = this.getChannelCount();
+    bus.splitter.disconnect();
+    bus.mono.disconnect();
+    // Se o dispositivo não tem o canal escolhido (ex.: placa desconectada), volta para as saídas 1-2
+    const { first, stereo } = bus.route;
+    const fits = stereo ? first + 1 < channels : first < channels;
+    const route = fits ? bus.route : { first: 0, stereo: true };
+    if (route.stereo) {
+      bus.splitter.connect(this.merger!, 0, route.first);
+      bus.splitter.connect(this.merger!, 1, route.first + 1);
+    } else {
+      bus.mono.connect(this.merger!, 0, route.first);
+    }
+  }
+
+  // Quantos canais de saída o dispositivo atual tem (2 = estéreo comum)
+  public getChannelCount(): number {
+    return this.ctx ? Math.max(2, this.ctx.destination.maxChannelCount) : 2;
+  }
+
+  // Troca a placa/dispositivo de saída ('' = padrão do sistema)
+  public async setOutputDevice(deviceId: string): Promise<number> {
+    this.init();
+    const ctx = this.ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> };
+    if (ctx.setSinkId) await ctx.setSinkId(deviceId);
+    this.buildOutput();
+    return this.getChannelCount();
+  }
+
+  public setRoute(bus: BusName, route: ChannelRoute) {
+    this.init();
+    this.buses![bus].route = route;
+    this.connectBus(this.buses![bus]);
+  }
+
+  // Volume de 0 a 1: 'master' = geral; 'pads' / 'audios' = grupo
+  public setVolume(target: BusName | 'master', volume: number) {
+    this.init();
+    const node = target === 'master' ? this.masterGain! : this.buses![target].input;
+    node.gain.setTargetAtTime(Math.max(0, Math.min(1, volume)), this.ctx!.currentTime, 0.015);
+  }
+
+  private busFor(pad: PadData): Bus {
+    return this.buses![pad.playToEnd ? 'audios' : 'pads'];
   }
 
   private createImpulseResponse(duration: number, decay: number): AudioBuffer {
@@ -104,10 +189,6 @@ class AudioEngine {
       }
     }
     return buffer;
-  }
-
-  public getAnalyser(): AnalyserNode | null {
-    return this.analyser;
   }
 
   // Decodifica WAV, MP3, FLAC, AAC/M4A e OGG pelo navegador; AIFF por conta própria (o Chromium não lê AIFF).
@@ -155,13 +236,14 @@ class AudioEngine {
     panner.pan.setValueAtTime(pad.pan / 100, now);
 
     panner.connect(padGain);
-    padGain.connect(this.masterGain);
+    const bus = this.busFor(pad);
+    padGain.connect(bus.input);
 
-    if (pad.reverbSend > 0 && this.reverbNode) {
+    if (pad.reverbSend > 0) {
       const sendGain = this.ctx.createGain();
       sendGain.gain.value = pad.reverbSend / 100;
       padGain.connect(sendGain);
-      sendGain.connect(this.reverbNode);
+      sendGain.connect(bus.reverb);
     }
 
     // Play custom buffer or synthetic sound
@@ -190,13 +272,14 @@ class AudioEngine {
     const panner = ctx.createStereoPanner();
     panner.pan.setValueAtTime(pad.pan / 100, now);
     panner.connect(gain);
-    gain.connect(this.masterGain!);
+    const bus = this.busFor(pad);
+    gain.connect(bus.input);
 
-    if (pad.reverbSend > 0 && this.reverbNode) {
+    if (pad.reverbSend > 0) {
       const sendGain = ctx.createGain();
       sendGain.gain.value = pad.reverbSend / 100;
       gain.connect(sendGain);
-      sendGain.connect(this.reverbNode);
+      sendGain.connect(bus.reverb);
     }
 
     const voice: FullVoice = { gain, source: null };

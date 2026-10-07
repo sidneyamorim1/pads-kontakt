@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio, Disc3, Volume2 } from 'lucide-react';
+import { Radio, Disc3, Volume2, Speaker } from 'lucide-react';
 import { SoundKit } from '../data/soundKits';
 
 interface HeaderProps {
@@ -9,6 +9,10 @@ interface HeaderProps {
   midiConnected: boolean;
   midiDeviceName: string | null;
   onRequestMidiAccess: () => void;
+  masterVolume: number;
+  onSetMasterVolume: (volume: number) => void;
+  outputLabel: string;
+  onOpenOutput: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,7 +21,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectKit,
   midiConnected,
   midiDeviceName,
-  onRequestMidiAccess
+  onRequestMidiAccess,
+  masterVolume,
+  onSetMasterVolume,
+  outputLabel,
+  onOpenOutput
 }) => {
   return (
     <header className="w-full glass-panel border-b border-white/10 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-40"
@@ -76,6 +84,28 @@ export const Header: React.FC<HeaderProps> = ({
               : 'Clique para Conectar MIDI'}
           </span>
         </button>
+
+        {/* Saída de áudio (placa / canais) */}
+        <button
+          type="button"
+          onClick={onOpenOutput}
+          title="Escolher placa de som e canais de saída"
+          className="flex items-center gap-2 bg-black/40 border border-white/10 hover:border-amber-500/50 rounded-lg px-3 py-1.5 text-xs font-mono text-gray-200 transition-all cursor-pointer active:scale-95 max-w-[14rem]"
+        >
+          <Speaker className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+          <span className="truncate">{outputLabel}</span>
+        </button>
+
+        {/* Volume geral */}
+        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5" title="Volume geral">
+          <Volume2 className="w-4 h-4 text-amber-500" />
+          <input
+            type="range" min={0} max={100} value={masterVolume}
+            onChange={(e) => onSetMasterVolume(Number(e.target.value))}
+            className="w-28"
+          />
+          <span className="text-xs text-gray-300 font-mono w-9 text-right">{masterVolume}%</span>
+        </div>
       </div>
 
     </header>

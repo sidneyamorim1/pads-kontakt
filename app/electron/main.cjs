@@ -53,7 +53,10 @@ app.whenReady().then(() => {
   ses.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));
   });
-  ses.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission));
+  // 'media' e 'speaker-selection' só na verificação: mostram o nome das placas/saídas de áudio
+  // e permitem escolher a saída. O microfone continua bloqueado (não está no RequestHandler).
+  ses.setPermissionCheckHandler((_wc, permission) =>
+    ALLOWED_PERMISSIONS.has(permission) || permission === 'media' || permission === 'speaker-selection');
 
   // Menu padrão do macOS (Copiar/Colar, Fechar com Cmd+W, Sair com Cmd+Q, etc.).
   Menu.setApplicationMenu(Menu.buildFromTemplate([

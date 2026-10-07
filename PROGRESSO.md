@@ -137,3 +137,13 @@ As seções acima que falam de KSP e Kontakt ficaram só como histórico. Tudo p
 - **Frases removidas:** "Clique nos pads para disparar…" (rodapé dos 12 pads) e "Toca até o fim · clicar de novo reinicia" (painel Áudios).
 - **9 cards de áudio** em 3×3 (ids 13 a 21). Os novos Áudio 7, 8 e 9 ficam na 3ª coluna, com as teclas U / J / M e as notas MIDI 54 a 56. A ordem na tela está em `SIDE_LAYOUT` (`PadHardware.tsx`). Os pads continuam com 158×118 px. Para isso, o conjunto ficou mais largo (`CONTROLLER_MAX_WIDTH`) e a janela abre com 1400 px.
 - **Tela cheia:** os pads e os cards não têm mais tamanho fixo. Eles esticam e ocupam a janela inteira abaixo do topo, deixando 16 px nas bordas. O `aspect-[4/3]` deu lugar a `flex-1` com `grid-rows-3`, e o `CONTROLLER_MAX_WIDTH` saiu. Medidas do pad: 182×163 px na janela padrão, 111×91 px na mínima e 256×237 px em 1920×1050, sempre sem rolagem. Em janelas estreitas, os botões dos cards de áudio mostram só o ícone.
+
+## 07/10/2026 — Saída de áudio e volumes
+- **Botão de saída no topo** (ícone de caixa de som, com o nome do dispositivo). Abre o painel "Saída de áudio":
+  - **Placa / dispositivo:** lista as saídas do Mac (placa de som, mesa USB, fones…) e usa `AudioContext.setSinkId`.
+  - **12 Pads** e **Áudios:** cada grupo tem o seu **canal** e o seu **volume**. Canal pode ser par estéreo (1-2, 3-4…) ou canal mono (1, 2, 3…). As opções seguem o número de canais do dispositivo.
+- **Volume geral:** slider no topo.
+- A configuração fica salva no computador (`localStorage`, `useAudioOutput.ts`). Se a placa salva não estiver conectada, o app toca no padrão do sistema, avisa no painel e volta para a placa quando ela for reconectada.
+- Motor (`audioEngine.ts`): cada grupo passa por volume do grupo → canais escolhidos → volume geral → dispositivo. Cada grupo tem o seu reverb. O analyser, que não era usado, saiu.
+- Electron: a verificação de permissão `media` e `speaker-selection` foi liberada para mostrar o nome das placas. O microfone continua bloqueado.
+- **Testado:** canais 1-2, só 1, só 2, volume por grupo, volume geral, troca de dispositivo e configuração salva entre aberturas. **Não testado:** placa com mais de 2 canais (nenhuma conectada neste Mac). O código usa `destination.maxChannelCount`.

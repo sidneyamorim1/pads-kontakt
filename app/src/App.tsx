@@ -6,6 +6,8 @@ import { Header } from './components/Header';
 import { PadHardware } from './components/PadHardware';
 import { PadEditor } from './components/PadEditor';
 import { PresetBar } from './components/PresetBar';
+import { OutputPanel } from './components/OutputPanel';
+import { useAudioOutput } from './utils/useAudioOutput';
 import { Preset, StoredPad, SESSION_ID, presetStore, toStoredPads } from './utils/presetStore';
 
 // Recarrega os samples salvos de cada pad e decodifica de volta para AudioBuffer.
@@ -35,6 +37,12 @@ export function App() {
   const [midiDeviceName, setMidiDeviceName] = useState<string | null>(null);
   const [midiLearnPadId, setMidiLearnPadId] = useState<number | null>(null);
   const [lastMidiEvent, setLastMidiEvent] = useState<{ type: 'note' | 'cc'; val: number; ch: number } | null>(null);
+
+  // Saída de áudio (placa, canais e volumes)
+  const output = useAudioOutput();
+  const [isOutputOpen, setIsOutputOpen] = useState<boolean>(false);
+  const outputLabel = output.devices.find(d => d.id === output.settings.deviceId)?.label
+    .replace(/\s*\((Built-in|Virtual|DisplayPort|HDMI|USB)\)$/i, '') ?? 'Saída padrão';
 
   // Presets
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -302,6 +310,21 @@ export function App() {
         midiConnected={midiConnected}
         midiDeviceName={midiDeviceName}
         onRequestMidiAccess={requestMidiAccess}
+        masterVolume={output.settings.master}
+        onSetMasterVolume={output.setMaster}
+        outputLabel={outputLabel}
+        onOpenOutput={() => setIsOutputOpen(true)}
+      />
+
+      <OutputPanel
+        isOpen={isOutputOpen}
+        onClose={() => setIsOutputOpen(false)}
+        settings={output.settings}
+        devices={output.devices}
+        channelCount={output.channelCount}
+        missingDevice={output.missingDevice}
+        onSetDevice={output.setDevice}
+        onSetGroup={output.setGroup}
       />
 
       {/* Main Content Area: Side-by-Side DAW Console */}
