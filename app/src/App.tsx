@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Volume2 } from 'lucide-react';
 import { SOUND_KITS, SIDE_LAYOUT, withSidePads } from './data/soundKits';
 import { PadData, audioEngine } from './utils/audioEngine';
 import { Header } from './components/Header';
@@ -67,6 +68,8 @@ export function App() {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState<boolean>(false);
+  // Navegador: o som fica bloqueado até o primeiro clique ou tecla na página
+  const [audioLocked, setAudioLocked] = useState<boolean>(false);
   // Pasta onde cada preset salvo também é gravado como .sampler (só no app instalado)
   const [backupFolder, setBackupFolder] = useState<string | null>(null);
   useEffect(() => {
@@ -89,6 +92,11 @@ export function App() {
   // Ao abrir: prepara o áudio (evita atraso no primeiro toque) e restaura a última sessão
   useEffect(() => {
     audioEngine.init();
+    setAudioLocked(audioEngine.isSuspended());
+    audioEngine.onSuspendedChange(setAudioLocked);
+    const unlock = () => audioEngine.resume();
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
     (async () => {
       try {
         setPresets(await presetStore.listPresets());
@@ -103,6 +111,10 @@ export function App() {
       }
       setSessionLoaded(true);
     })();
+    return () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
   }, []);
 
   const saveSession = useCallback(() => presetStore.putPreset({
@@ -453,6 +465,19 @@ export function App() {
         onClose={() => setSettingsPadId(null)}
         onUpdatePad={handleUpdatePad}
       />
+
+      {/* Navegador: aviso enquanto o som está bloqueado (o MIDI só toca depois de um clique na página) */}
+      {audioLocked && (
+        <button
+          type="button"
+          onClick={() => audioEngine.resume()}
+          className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold cursor-pointer"
+          style={{ padding: '8px 16px' }}
+        >
+          <Volume2 className="w-4 h-4" />
+          Som bloqueado pelo navegador até o primeiro clique: clique aqui para ativar o som e o controlador MIDI
+        </button>
+      )}
 
       {/* Main Content Area: Side-by-Side DAW Console */}
       {/* Ocupa toda a janela abaixo do topo; padding inline porque o reset do index.css anula px/py */}

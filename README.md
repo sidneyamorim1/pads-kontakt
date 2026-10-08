@@ -14,9 +14,10 @@ npm run app          # abre o app para testar
 npm run dist         # gera o .app e o .dmg para Mac com chip Apple (M1/M2/M3)
 npm run dist:intel   # gera o .app e o .dmg para Mac Intel (ex.: iMac 2019)
 npm run dist:win     # gera o instalador e a versão portátil para Windows (64 bits)
+npm run instaladores # gera Mac Intel + Windows e copia para a pasta instaladores/
 ```
 
-Os instaladores ficam em `app/release/`.
+Os instaladores ficam em `app/release/`. O `npm run instaladores` também copia para `instaladores/mac` e `instaladores/windows`, na raiz do projeto.
 
 ## Pastas
 
@@ -24,6 +25,8 @@ Os instaladores ficam em `app/release/`.
 |---|---|
 | `app/src` | Interface React, motor de áudio e presets |
 | `app/electron` | Processo principal do Electron (janela nativa e permissões de MIDI) |
+| `instaladores` | Instaladores prontos: `mac/` (.dmg) e `windows/` (.exe). Fica fora do git (arquivos de mais de 100 MB) |
+| `samples` | Áudios para carregar nos pads: `mp3/` e `wav/`. O git guarda só as pastas, não os áudios |
 | `controlador-arduino` | Controlador físico de 21 botões (Raspberry Pi Pico): código, arquivo pronto para gravar e guia de montagem |
 
 O histórico e as pendências estão em `PROGRESSO.md`.

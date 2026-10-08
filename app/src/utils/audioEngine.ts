@@ -91,6 +91,22 @@ class AudioEngine {
     this.playingListener?.(padId, false);
   }
 
+  // O navegador começa com o áudio suspenso até o primeiro clique ou tecla na página (nota MIDI não conta).
+  // No app instalado isso não acontece (main.cjs desliga a regra de autoplay).
+  public isSuspended(): boolean {
+    return this.ctx?.state === 'suspended';
+  }
+
+  public onSuspendedChange(listener: (suspended: boolean) => void) {
+    this.init();
+    this.ctx!.onstatechange = () => listener(this.isSuspended());
+  }
+
+  public resume() {
+    this.init();
+    if (this.ctx!.state === 'suspended') this.ctx!.resume().catch(() => {});
+  }
+
   public init() {
     if (this.ctx) return;
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

@@ -5,3 +5,11 @@ release/
 
 # macOS
 .DS_Store
+
+# Instaladores gerados (passam do limite de 100 MB do GitHub)
+instaladores/
+
+# Áudios dos samples (só a estrutura de pastas vai para o git)
+samples/**/*
+!samples/**/
+!samples/**/.gitkeep

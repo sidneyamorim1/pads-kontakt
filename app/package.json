@@ -11,7 +11,8 @@
     "dist": "npm run build && electron-builder --mac --arm64",
     "dist:universal": "npm run build && electron-builder --mac --universal",
     "dist:intel": "npm run build && electron-builder --mac --x64",
-    "dist:win": "npm run build && electron-builder --win --x64"
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "instaladores": "npm run build && electron-builder --mac --x64 && electron-builder --win --x64 && node scripts/copiar-instaladores.cjs"
   },
   "dependencies": {},
   "devDependencies": {
@@ -42,8 +43,10 @@
     "appId": "com.sidamorim.samplerstudio",
     "productName": "Sampler Studio",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
+    "icon": "build/icon.png",
     "files": [
       "dist/**/*",
       "electron/**/*",

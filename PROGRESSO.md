@@ -225,3 +225,23 @@ Discutido em 07/10/2026. **Por enquanto o controlador fica sem LEDs e sem integr
 ### Uma cópia do app por vez
 - `electron/main.cjs` usa `requestSingleInstanceLock`. Abrir o app de novo só traz a janela aberta para a frente. Motivo: o app instalado e o `npm run app` usam a mesma pasta de dados, e duas cópias abertas ao mesmo tempo podem estragar os presets. **Testado.**
 - Atenção: o Sampler Studio instalado hoje ainda é da versão antiga, sem essa trava. Feche-o antes de rodar `npm run app`.
+
+### Ícone do app
+- Ícone próprio: o disco preto sobre laranja, igual ao logo do topo do app (escolhido entre duas propostas).
+- Fonte em `app/build/icon.svg`. O `app/build/icon.png` (1024 px) é usado pelo electron-builder, que gera o `.icns` do Mac e o `.ico` do Windows.
+- O mesmo desenho virou o ícone da aba do navegador (`app/public/favicon.svg`).
+- Para mudar o ícone: edite o `icon.svg`, exporte de novo o `icon.png` em 1024×1024 e gere os instaladores.
+- Correção (08/10/2026): o app instalado antes do ícone era o build das 14:46. Foi substituído pelo build com ícone, e o cache de ícones do Mac foi atualizado.
+- Nota para quem desenvolve pelo VS Code: o terminal do VS Code define `ELECTRON_RUN_AS_NODE=1`, e qualquer app Electron aberto por ele (inclusive com `open -a`) roda como Node puro e fecha na hora. Use `env -u ELECTRON_RUN_AS_NODE` antes do comando. Pelo Dock ou Finder isso não acontece.
+
+### Pastas `instaladores` e `samples`
+- `instaladores/mac` e `instaladores/windows`, na raiz do projeto. `npm run instaladores` (dentro de `app/`) gera Mac Intel + Windows e copia para lá (`app/scripts/copiar-instaladores.cjs`). A pasta fica fora do git: os arquivos passam do limite de 100 MB do GitHub.
+- `samples/mp3` e `samples/wav`: lugar para guardar os áudios dos pads. O git guarda só as pastas (`.gitkeep`), não os áudios.
+
+### MIDI: tentativa de "só pads mapeados respondem" (desfeita)
+- Testado pelo usuário em 08/10/2026: não funcionou como esperado e foi desfeito. O MIDI voltou ao comportamento anterior: pad sem mapeamento usa a nota padrão (36 a 56).
+
+### Aviso de som bloqueado no navegador
+- No Chrome, o som fica bloqueado até o primeiro clique ou tecla na página. Nota MIDI não conta, então o controlador não toca logo depois de abrir ou recarregar a página. Era isso que fazia o MIDI "só funcionar depois de clicar no preset".
+- Agora aparece uma faixa laranja "Som bloqueado pelo navegador…" enquanto o som estiver bloqueado, e qualquer clique ou tecla libera o som (`isSuspended`/`resume` em `audioEngine.ts`).
+- No app instalado isso não acontece (`autoplay-policy` em `main.cjs`), e a faixa não aparece. O usuário vai usar só o app.
