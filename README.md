@@ -1,6 +1,6 @@
 # Sampler Studio
 
-App de desktop para macOS com 12 pads, 9 cards de áudio que tocam até o fim, MIDI e presets.
+App de desktop para macOS e Windows com 12 pads, 9 cards de áudio que tocam até o fim, MIDI e presets.
 Feito em React + Vite e empacotado com Electron.
 
 ## Rodar e gerar o app
@@ -13,6 +13,7 @@ npm install
 npm run app          # abre o app para testar
 npm run dist         # gera o .app e o .dmg para Mac com chip Apple (M1/M2/M3)
 npm run dist:intel   # gera o .app e o .dmg para Mac Intel (ex.: iMac 2019)
+npm run dist:win     # gera o instalador e a versão portátil para Windows (64 bits)
 ```
 
 Os instaladores ficam em `app/release/`.

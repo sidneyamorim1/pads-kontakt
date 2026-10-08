@@ -1,9 +1,7 @@
 import React, { useRef } from 'react';
 import { PadData } from '../utils/audioEngine';
-import { Music, Upload, MousePointerClick, PlayCircle, Square } from 'lucide-react';
-
-// Ordem na tela (3 colunas x 3 linhas): os cards 7, 8 e 9 (ids 19-21) ocupam a 3ª coluna
-const SIDE_LAYOUT = [13, 14, 19, 15, 16, 20, 17, 18, 21];
+import { SIDE_LAYOUT } from '../data/soundKits';
+import { Music, Upload, MousePointerClick, PlayCircle, Square, SlidersHorizontal, Repeat, X } from 'lucide-react';
 
 interface PadHardwareProps {
   pads: PadData[];
@@ -15,7 +13,27 @@ interface PadHardwareProps {
   onStopAllSide: () => void;
   onSelectPad: (pad: PadData) => void;
   onUploadSample: (padId: number, file: File) => void;
+  onRemoveSample: (padId: number) => void;
   onUpdatePadName: (padId: number, newName: string) => void;
+  onOpenCardSettings: (padId: number) => void;
+  // Modo edição: mostra os botões de áudio, ajustes e renomear (fora dele, os cards ficam limpos para tocar)
+  editMode: boolean;
+  // MIDI Learn: clicar num pad escolhe qual vai aprender, em vez de tocar
+  learnMode: boolean;
+  learnPadId: number | null;
+  bindingLabels: Record<number, string>;
+  onLearnSelect: (padId: number) => void;
+}
+
+// Resumo dos ajustes de um card de áudio, mostrado no rodapé dele
+function cardModeLabel(pad: PadData): string {
+  const parts = [
+    pad.loop && 'Loop',
+    pad.exclusive && '1 por vez',
+    (pad.fadeIn || pad.fadeOut) && 'Fade',
+    pad.retrigger === 'stop' && 'Liga/desliga',
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'Até o fim';
 }
 
 export const PadHardware: React.FC<PadHardwareProps> = ({
@@ -28,7 +46,14 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
   onStopAllSide,
   onSelectPad,
   onUploadSample,
-  onUpdatePadName
+  onRemoveSample,
+  onUpdatePadName,
+  onOpenCardSettings,
+  editMode,
+  learnMode,
+  learnPadId,
+  bindingLabels,
+  onLearnSelect
 }) => {
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -40,6 +65,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
   const handleDrop = (padId: number, e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!editMode) return; // fora do modo edição, um arquivo solto sem querer não troca o som
     const file = e.dataTransfer.files?.[0];
     // Alguns formatos (ex.: .aif, .flac) chegam sem tipo; a decodificação avisa se não for áudio
     if (file && (file.type.startsWith('audio/') || file.type === '')) {
@@ -56,6 +82,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
   const renderPad = (pad: PadData, side: boolean) => {
     const isActive = !!activePadStates[pad.id] || (side && !!playingPads[pad.id]);
     const isSelected = activePadId === pad.id;
+    const isLearnTarget = learnMode && learnPadId === pad.id;
     const selectedBorder = side
       ? 'border-fuchsia-400/80 bg-fuchsia-500/10 shadow-md shadow-fuchsia-500/20'
       : 'border-amber-500/80 bg-amber-500/10 shadow-md shadow-amber-500/15';
@@ -96,6 +123,21 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+          {/* Ajustes do card lateral (loop, fades, um por vez) */}
+          {side && editMode && (
+            <button
+              type="button"
+              title="Ajustes deste áudio: loop, fade, um por vez"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCardSettings(pad.id);
+              }}
+              className={`px-1.5 py-0.5 rounded transition-colors border flex items-center text-[9px] font-mono ${uploadStyle}`}
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+            </button>
+          )}
+
           {/* Parar o áudio do card lateral */}
           {side && (
             <button
@@ -113,7 +155,23 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             </button>
           )}
 
+          {/* Remover o áudio carregado (volta ao som interno) */}
+          {editMode && pad.customFileName && (
+            <button
+              type="button"
+              title={`Remover o áudio "${pad.customFileName}"`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Remover o áudio "${pad.customFileName}" do ${side ? `Áudio ${pad.id - 12}` : `Pad ${pad.id}`}?`)) onRemoveSample(pad.id);
+              }}
+              className="px-1 py-0.5 rounded transition-colors border flex items-center text-[9px] bg-gray-800/60 hover:bg-red-500/35 text-gray-400 hover:text-red-200 border-white/10 hover:border-red-500/40"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+
           {/* Upload Audio Quick Icon */}
+          {editMode && (
           <button
             type="button"
             title="Carregar Áudio para este Pad"
@@ -127,6 +185,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             {/* Nos cards laterais o texto só aparece em janelas largas (senão não cabe ao lado do Parar) */}
             <span className={side ? 'hidden xl:inline' : 'hidden sm:inline'}>Som</span>
           </button>
+          )}
           </div>
         </div>
 
@@ -135,14 +194,19 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
           type="button"
           onMouseDown={(e) => {
             e.stopPropagation();
+            if (learnMode) {
+              onLearnSelect(pad.id);
+              return;
+            }
             onSelectPad(pad);
             onTriggerPad(pad);
           }}
           className={`w-full flex-1 min-h-0 rounded-xl pad-button flex flex-col items-center justify-between p-1.5 sm:p-3 transition-all cursor-pointer active:scale-95 ${
             isActive ? 'active shadow-cyan-500/40' : ''
-          }`}
+          } ${isLearnTarget ? 'animate-pulse' : ''}`}
           style={{
-            borderColor: isActive ? (side ? '#f0abfc' : '#00f0ff') : isSelected ? (side ? '#e879f9' : '#ff8c00') : (side ? 'rgba(232,121,249,0.25)' : 'rgba(255,255,255,0.08)'),
+            borderColor: isLearnTarget ? '#22d3ee' : isActive ? (side ? '#f0abfc' : '#00f0ff') : isSelected && !learnMode ? (side ? '#e879f9' : '#ff8c00') : (side ? 'rgba(232,121,249,0.25)' : 'rgba(255,255,255,0.08)'),
+            ...(isLearnTarget ? { borderWidth: 2 } : {}),
             ...(side ? { background: `linear-gradient(160deg, ${pad.color}33, rgba(20,12,28,0.95) 70%)` } : {})
           }}
         >
@@ -162,7 +226,13 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
               {pad.name}
             </span>
 
-            {pad.customFileName && (
+            {learnMode && (
+              <span className={`text-[10px] font-mono font-bold mt-0.5 ${isLearnTarget ? 'text-cyan-300' : 'text-cyan-500'}`}>
+                {isLearnTarget ? 'aguardando…' : bindingLabels[pad.id]}
+              </span>
+            )}
+
+            {!learnMode && pad.customFileName && (
               <span className={`hidden sm:block text-[9px] font-mono truncate max-w-full mt-0.5 ${side ? 'text-fuchsia-300' : 'text-emerald-400'}`}>
                 {pad.customFileName}
               </span>
@@ -171,7 +241,10 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
 
           {/* Number Label */}
           <div className="w-full flex justify-between items-center text-gray-400 text-[9px] font-mono">
-            <span className="hidden sm:inline text-[8px] text-gray-500">{side ? 'Até o fim' : 'Clique'}</span>
+            <span className={`hidden sm:flex items-center gap-1 text-[8px] truncate ${side && cardModeLabel(pad) !== 'Até o fim' ? 'text-fuchsia-300' : 'text-gray-500'}`}>
+              {side && pad.loop && <Repeat className="w-2.5 h-2.5 shrink-0" />}
+              {side ? cardModeLabel(pad) : 'Clique'}
+            </span>
             <span className={`ml-auto text-xs font-bold ${side ? 'text-fuchsia-200 uppercase' : 'text-gray-200 group-hover:text-amber-400'}`}>
               {side ? pad.keyTrigger : pad.id}
             </span>
@@ -179,6 +252,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
         </button>
 
         {/* Inline Rename Input */}
+        {editMode && (
         <div className="w-full mt-1.5 hidden sm:block">
           <input
             type="text"
@@ -191,6 +265,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             }`}
           />
         </div>
+        )}
       </div>
     );
   };
@@ -209,7 +284,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-500/30 flex items-center gap-1.5 font-sans font-semibold">
-              <MousePointerClick className="w-3.5 h-3.5 text-cyan-400" /> Clique no Mouse ou Arraste Áudios
+              <MousePointerClick className="w-3.5 h-3.5 text-cyan-400" /> {editMode ? 'Modo edição: arraste áudios para os pads' : 'Clique no mouse ou use o teclado / MIDI'}
             </span>
           </div>
         </div>

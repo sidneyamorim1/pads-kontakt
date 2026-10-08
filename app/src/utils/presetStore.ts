@@ -1,4 +1,5 @@
 import { PadData } from './audioEngine';
+import type { SaveFileHandle } from './fileSave';
 
 // Armazenamento local (IndexedDB) dos presets e dos arquivos de áudio carregados nos pads.
 // Os samples são guardados uma única vez e referenciados pelos presets via `customSampleId`.
@@ -12,6 +13,9 @@ export interface Preset {
   pads: StoredPad[];
   updatedAt: number;
   activePresetId?: string | null; // só na sessão: qual preset estava aberto
+  // Arquivo .sampler ligado ao preset pelo "Salvar como…": caminho no app instalado, handle no navegador
+  filePath?: string;
+  fileHandle?: SaveFileHandle;
 }
 
 export interface StoredSample {

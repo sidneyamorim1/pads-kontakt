@@ -1,16 +1,31 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import confetti from 'canvas-confetti';
-import { SOUND_KITS, withSidePads } from './data/soundKits';
+import { SOUND_KITS, SIDE_LAYOUT, withSidePads } from './data/soundKits';
 import { PadData, audioEngine } from './utils/audioEngine';
 import { Header } from './components/Header';
 import { PadHardware } from './components/PadHardware';
 import { PadEditor } from './components/PadEditor';
 import { PresetBar } from './components/PresetBar';
 import { OutputPanel } from './components/OutputPanel';
+import { CardSettingsPanel } from './components/CardSettingsPanel';
+import { MidiLearnBar } from './components/MidiLearnBar';
 import { useAudioOutput } from './utils/useAudioOutput';
-import { Preset, StoredPad, SESSION_ID, presetStore, toStoredPads } from './utils/presetStore';
+import { Preset, StoredPad, StoredSample, SESSION_ID, presetStore, toStoredPads } from './utils/presetStore';
+import { buildPresetFile, readPresetFile } from './utils/presetFile';
+import { desktop } from './utils/desktop';
+import { SaveTarget, canChooseFile, chooseSaveTarget, saveTargetLabel, writeSaveTarget } from './utils/fileSave';
+import { MidiMap, bindingFor, bindingLabel, loadMidiMap, saveMidiMap, sameBinding } from './utils/midiMap';
+
+// Ordem do MIDI Learn: os 12 pads e depois os cards na ordem da tela
+const LEARN_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, ...SIDE_LAYOUT];
 
 // Recarrega os samples salvos de cada pad e decodifica de volta para AudioBuffer.
+// Monta o arquivo .sampler de um preset, com os áudios que ele usa
+async function presetFileFor(name: string, kitId: string, pads: StoredPad[]): Promise<Blob> {
+  const ids = Array.from(new Set(pads.map(p => p.customSampleId).filter((id): id is string => !!id)));
+  const samples = (await Promise.all(ids.map(id => presetStore.getSample(id)))).filter((s): s is StoredSample => !!s);
+  return buildPresetFile([{ name, kitId, pads }], samples);
+}
+
 async function hydratePads(stored: StoredPad[]): Promise<PadData[]> {
   return Promise.all(stored.map(async (pad) => {
     if (!pad.customSampleId) return pad;
@@ -35,12 +50,16 @@ export function App() {
   // MIDI State
   const [midiConnected, setMidiConnected] = useState<boolean>(false);
   const [midiDeviceName, setMidiDeviceName] = useState<string | null>(null);
-  const [midiLearnPadId, setMidiLearnPadId] = useState<number | null>(null);
+  const [midiMap, setMidiMap] = useState<MidiMap>(loadMidiMap);
+  const [learnMode, setLearnMode] = useState<boolean>(false);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [learnPadId, setLearnPadId] = useState<number | null>(null);
   const [lastMidiEvent, setLastMidiEvent] = useState<{ type: 'note' | 'cc'; val: number; ch: number } | null>(null);
 
   // Saída de áudio (placa, canais e volumes)
   const output = useAudioOutput();
   const [isOutputOpen, setIsOutputOpen] = useState<boolean>(false);
+  const [settingsPadId, setSettingsPadId] = useState<number | null>(null);
   const outputLabel = output.devices.find(d => d.id === output.settings.deviceId)?.label
     .replace(/\s*\((Built-in|Virtual|DisplayPort|HDMI|USB)\)$/i, '') ?? 'Saída padrão';
 
@@ -48,6 +67,11 @@ export function App() {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState<boolean>(false);
+  // Pasta onde cada preset salvo também é gravado como .sampler (só no app instalado)
+  const [backupFolder, setBackupFolder] = useState<string | null>(null);
+  useEffect(() => {
+    desktop?.getBackupFolder().then(setBackupFolder);
+  }, []);
 
 
   // Handle kit selection
@@ -115,17 +139,52 @@ export function App() {
     setSelectedPadId(1);
   };
 
-  const handleSavePreset = async (name: string, overwriteId: string | null) => {
+  // Salva o preset no app e, no app instalado, também no arquivo ligado a ele e na pasta de cópia
+  const handleSavePreset = async (name: string, overwriteId: string | null, target?: SaveTarget) => {
+    const previous = presets.find(p => p.id === overwriteId);
     const preset: Preset = {
       id: overwriteId ?? crypto.randomUUID(),
       name,
       kitId: activeKitId,
       pads: toStoredPads(pads),
       updatedAt: Date.now(),
+      filePath: target ? target.filePath : previous?.filePath,
+      fileHandle: target ? target.fileHandle : previous?.fileHandle,
     };
     await presetStore.putPreset(preset);
     setPresets(await presetStore.listPresets());
     setActivePresetId(preset.id);
+
+    const linked = saveTargetLabel(preset);
+    if (!linked && !(desktop && backupFolder)) return;
+    const data = await (await presetFileFor(name, preset.kitId, preset.pads)).arrayBuffer();
+    const failed: string[] = [];
+    if (linked) {
+      await writeSaveTarget(preset, data).catch(err => { console.error(err); failed.push(linked); });
+    }
+    if (desktop && backupFolder) {
+      await desktop.writeBackup(name, data).catch(err => { console.error(err); failed.push(`${backupFolder} (pasta de cópia)`); });
+    }
+    if (failed.length) {
+      alert(`O preset "${name}" foi salvo no app, mas não foi possível gravar em:\n${failed.join('\n')}\n\nConfira se a pasta (ou o pendrive) está disponível.`);
+    }
+  };
+
+  // "Salvar como…": a janela do sistema escolhe a pasta e o nome do arquivo (app instalado e Chrome)
+  const handleSaveAs = async () => {
+    let target;
+    try {
+      target = await chooseSaveTarget(activePreset?.name ?? 'Novo preset');
+    } catch (err) {
+      console.error('Erro na janela de salvar:', err);
+      alert('Não foi possível abrir a janela de salvar.');
+      return;
+    }
+    if (!target) return;
+    const existing = presets.find(p => p.name.toLowerCase() === target.name.toLowerCase());
+    const sameFile = existing && target.filePath && existing.filePath === target.filePath;
+    if (existing && !sameFile && !window.confirm(`Já existe no app um preset "${existing.name}". Substituir?`)) return;
+    await handleSavePreset(target.name, existing?.id ?? null, target);
   };
 
   const handleDeletePreset = async (id: string) => {
@@ -134,6 +193,45 @@ export function App() {
     await presetStore.deletePreset(id);
     setPresets(await presetStore.listPresets());
     if (activePresetId === id) setActivePresetId(null);
+  };
+
+  // Exporta o que está na tela (com os áudios) num arquivo .sampler
+  const handleExportPreset = async () => {
+    const name = activePreset?.name ?? 'Sessão';
+    const blob = await presetFileFor(name, activeKitId, toStoredPads(pads));
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${name.replace(/[\\/:*?"<>|]/g, '-')}.sampler`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  };
+
+  // Importa arquivos .sampler: grava os áudios, adiciona os presets e abre o primeiro
+  const handleImportPresets = async (files: File[]) => {
+    const names = new Set((await presetStore.listPresets()).map(p => p.name.toLowerCase()));
+    const imported: string[] = [];
+    const failed: string[] = [];
+    for (const file of files) {
+      try {
+        const { presets: filePresets, samples } = await readPresetFile(file);
+        for (const sample of samples) await presetStore.putSample(sample);
+        for (const fp of filePresets) {
+          const base = fp.name || file.name.replace(/\.sampler$/i, '');
+          let name = base;
+          for (let n = 2; names.has(name.toLowerCase()); n++) name = `${base} (${n})`;
+          names.add(name.toLowerCase());
+          const id = crypto.randomUUID();
+          await presetStore.putPreset({ id, name, kitId: fp.kitId, pads: fp.pads, updatedAt: Date.now() });
+          imported.push(id);
+        }
+      } catch (err) {
+        console.error('Erro ao importar preset:', err);
+        failed.push(file.name);
+      }
+    }
+    setPresets(await presetStore.listPresets());
+    if (imported.length) await handleLoadPreset(imported[0]);
+    if (failed.length) alert(`Não foi possível importar:\n${failed.join('\n')}\n\nSó arquivos .sampler exportados pelo Sampler Studio são aceitos.`);
   };
 
   // Trigger Pad Sound
@@ -178,7 +276,48 @@ export function App() {
     } : p));
   };
 
-  // Web MIDI API setup with support for both NoteOn & ControlChange (CC)
+  // Remove o áudio carregado: o pad volta ao som interno. O arquivo some do armazenamento
+  // quando nenhum preset usar mais (limpeza ao excluir presets).
+  const handleRemoveSample = (padId: number) => {
+    audioEngine.stopFull(padId);
+    setPads(prev => prev.map(p => {
+      if (p.id !== padId) return p;
+      const { customBuffer, customFileName, customSampleId, ...rest } = p;
+      return rest;
+    }));
+  };
+
+  // Mapeamento MIDI salvo neste computador
+  useEffect(() => saveMidiMap(midiMap), [midiMap]);
+
+  // Mensagem MIDI recebida (Note On ou CC). Fica num ref para o leitor MIDI, registrado uma vez,
+  // sempre usar os pads e o mapeamento atuais.
+  const handleMidiRef = useRef<(type: 'note' | 'cc', num: number, value: number, ch: number) => void>(() => {});
+  handleMidiRef.current = (type, num, value, ch) => {
+    setLastMidiEvent({ type, val: num, ch });
+    const binding = { type, num };
+
+    if (learnMode) {
+      if (learnPadId === null) return;
+      setMidiMap(prev => {
+        const next = { ...prev };
+        const target = pads.find(p => p.id === learnPadId);
+        // Se outro pad já usava este botão, ele fica com o botão antigo do pad que está aprendendo (troca)
+        const other = pads.find(p => p.id !== learnPadId && sameBinding(bindingFor(p, prev), binding));
+        if (other && target) next[other.id] = bindingFor(target, prev);
+        next[learnPadId] = binding;
+        return next;
+      });
+      const nextIndex = LEARN_ORDER.indexOf(learnPadId) + 1;
+      setLearnPadId(LEARN_ORDER[nextIndex] ?? null);
+      return;
+    }
+
+    const matchedPad = pads.find(p => sameBinding(bindingFor(p, midiMap), binding));
+    if (matchedPad) triggerPad(matchedPad, value / 127);
+  };
+
+  // Web MIDI: escuta todos os controladores conectados (Note On e CC)
   const requestMidiAccess = useCallback(async () => {
     if (!navigator.requestMIDIAccess) {
       alert("Seu navegador não suporta a API Web MIDI. Recomendamos o Google Chrome, Brave ou Edge.");
@@ -186,78 +325,56 @@ export function App() {
     }
 
     try {
-      const midiAccess = await navigator.requestMIDIAccess({ sysex: true }).catch(() => 
+      const midiAccess = await navigator.requestMIDIAccess({ sysex: true }).catch(() =>
         navigator.requestMIDIAccess({ sysex: false })
       );
 
       const updateInputs = (access: MIDIAccess) => {
         const currentInputs = Array.from(access.inputs.values());
-        if (currentInputs.length > 0) {
-          setMidiConnected(true);
-          const devNames = currentInputs.map(i => i.name).filter(Boolean).join(', ');
-          setMidiDeviceName(devNames || 'Controlador USB MIDI');
+        setMidiConnected(currentInputs.length > 0);
+        setMidiDeviceName(currentInputs.length ? currentInputs.map(i => i.name).filter(Boolean).join(', ') || 'Controlador USB MIDI' : null);
 
-          currentInputs.forEach(input => {
-            input.onmidimessage = (event: MIDIMessageEvent) => {
-              const [status, data1, data2] = event.data || [0, 0, 0];
-              const command = status >> 4; // 9 = NoteOn, 11 = CC, 8 = NoteOff
-              const channel = (status & 0x0F) + 1;
-
-              let isTrigger = false;
-              let midiType: 'note' | 'cc' = 'note';
-
-              if (command === 9 && data2 > 0) {
-                isTrigger = true;
-                midiType = 'note';
-              } else if (command === 11 && data2 > 0) {
-                isTrigger = true;
-                midiType = 'cc';
-              }
-
-              if (isTrigger) {
-                // Update Live Monitor
-                setLastMidiEvent({ type: midiType, val: data1, ch: channel });
-
-                // If in MIDI Learn Mode
-                if (midiLearnPadId !== null) {
-                  setPads(prev => prev.map(p => p.id === midiLearnPadId ? { 
-                    ...p, 
-                    midiNote: data1, 
-                    midiType: midiType 
-                  } : p));
-                  setMidiLearnPadId(null);
-                  confetti({ particleCount: 40, spread: 70, origin: { y: 0.8 } });
-                  return;
-                }
-
-                // Match pad by assigned MIDI note/cc and type
-                const matchedPad = pads.find(p => p.midiNote === data1 && (p.midiType || 'note') === midiType);
-                if (matchedPad) {
-                  triggerPad(matchedPad, data2 / 127);
-                }
-              }
-            };
-          });
-        } else {
-          setMidiConnected(false);
-          setMidiDeviceName(null);
-        }
+        currentInputs.forEach(input => {
+          input.onmidimessage = (event: MIDIMessageEvent) => {
+            const [status, data1, data2] = event.data || [0, 0, 0];
+            const command = status >> 4; // 9 = NoteOn, 11 = CC, 8 = NoteOff
+            const channel = (status & 0x0F) + 1;
+            if (data2 > 0 && (command === 9 || command === 11)) {
+              handleMidiRef.current(command === 9 ? 'note' : 'cc', data1, data2, channel);
+            }
+          };
+        });
       };
 
       updateInputs(midiAccess);
-
-      midiAccess.onstatechange = () => {
-        updateInputs(midiAccess);
-      };
+      midiAccess.onstatechange = () => updateInputs(midiAccess);
     } catch (err) {
       console.error("Erro ao solicitar acesso MIDI:", err);
       setMidiConnected(false);
     }
-  }, [pads, midiLearnPadId, triggerPad]);
+  }, []);
 
   useEffect(() => {
     requestMidiAccess();
   }, [requestMidiAccess]);
+
+  const toggleLearn = () => {
+    setLearnMode(on => !on);
+    setLearnPadId(null);
+  };
+
+  // Esc sai do MIDI Learn
+  useEffect(() => {
+    if (!learnMode) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setLearnMode(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [learnMode]);
+
+  const bindingLabels = useMemo(
+    () => Object.fromEntries(pads.map(p => [p.id, bindingLabel(bindingFor(p, midiMap))])),
+    [pads, midiMap]
+  );
 
   // Keyboard Shortcuts (1-=, QWER / ASDF / ZXCV)
   useEffect(() => {
@@ -310,6 +427,10 @@ export function App() {
         midiConnected={midiConnected}
         midiDeviceName={midiDeviceName}
         onRequestMidiAccess={requestMidiAccess}
+        learnMode={learnMode}
+        onToggleLearn={toggleLearn}
+        editMode={editMode}
+        onToggleEdit={() => setEditMode(on => !on)}
         masterVolume={output.settings.master}
         onSetMasterVolume={output.setMaster}
         outputLabel={outputLabel}
@@ -327,6 +448,12 @@ export function App() {
         onSetGroup={output.setGroup}
       />
 
+      <CardSettingsPanel
+        pad={pads.find(p => p.id === settingsPadId) ?? null}
+        onClose={() => setSettingsPadId(null)}
+        onUpdatePad={handleUpdatePad}
+      />
+
       {/* Main Content Area: Side-by-Side DAW Console */}
       {/* Ocupa toda a janela abaixo do topo; padding inline porque o reset do index.css anula px/py */}
       <main className="flex-1 min-h-0 w-full flex flex-col gap-3 items-stretch" style={{ padding: '10px 16px 16px' }}>
@@ -337,7 +464,21 @@ export function App() {
           onLoad={handleLoadPreset}
           onSave={handleSavePreset}
           onDelete={handleDeletePreset}
+          onExport={handleExportPreset}
+          onSaveAs={canChooseFile ? handleSaveAs : undefined}
+          onImport={handleImportPresets}
+          backupFolder={desktop ? backupFolder : undefined}
+          onChooseBackup={async () => desktop && setBackupFolder(await desktop.chooseBackupFolder())}
+          onClearBackup={async () => desktop && setBackupFolder(await desktop.clearBackupFolder())}
         />
+        {learnMode && (
+          <MidiLearnBar
+            targetPad={pads.find(p => p.id === learnPadId) ?? null}
+            lastMidiEvent={lastMidiEvent}
+            onReset={() => setMidiMap({})}
+            onDone={toggleLearn}
+          />
+        )}
         <PadHardware
           pads={pads}
           activePadId={selectedPadId}
@@ -348,7 +489,14 @@ export function App() {
           onStopAllSide={() => audioEngine.stopAllFull()}
           onSelectPad={(pad) => setSelectedPadId(pad.id)}
           onUploadSample={handleUploadSample}
+          onRemoveSample={handleRemoveSample}
           onUpdatePadName={handleUpdatePadName}
+          onOpenCardSettings={setSettingsPadId}
+          editMode={editMode}
+          learnMode={learnMode}
+          learnPadId={learnPadId}
+          bindingLabels={bindingLabels}
+          onLearnSelect={setLearnPadId}
         />
         {/* Hidden Inspector (optional) */}
         <div className="hidden">

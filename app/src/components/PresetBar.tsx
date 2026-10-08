@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Save, SaveAll, Trash2, Bookmark, Check, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Save, SaveAll, Trash2, Bookmark, Check, X, Download, FolderOpen, FolderSync } from 'lucide-react';
 import { Preset } from '../utils/presetStore';
+import { saveTargetLabel } from '../utils/fileSave';
 
 interface PresetBarProps {
   presets: Preset[];
@@ -9,9 +10,18 @@ interface PresetBarProps {
   onLoad: (id: string) => void;
   onSave: (name: string, overwriteId: string | null) => void;
   onDelete: (id: string) => void;
+  onExport: () => void;
+  // App instalado: "Salvar como…" abre a janela do sistema (no navegador, digita-se o nome aqui)
+  onSaveAs?: () => void;
+  onImport: (files: File[]) => void;
+  // Pasta de cópia: undefined = indisponível (navegador); null = nenhuma escolhida
+  backupFolder: string | null | undefined;
+  onChooseBackup: () => void;
+  onClearBackup: () => void;
 }
 
-export const PresetBar: React.FC<PresetBarProps> = ({ presets, activePresetId, dirty, onLoad, onSave, onDelete }) => {
+export const PresetBar: React.FC<PresetBarProps> = ({ presets, activePresetId, dirty, onLoad, onSave, onDelete, onExport, onSaveAs, onImport, backupFolder, onChooseBackup, onClearBackup }) => {
+  const importRef = useRef<HTMLInputElement>(null);
   // null = barra normal; string = digitando o nome de um preset novo
   const [newName, setNewName] = useState<string | null>(null);
   const active = presets.find(p => p.id === activePresetId) || null;
@@ -52,15 +62,18 @@ export const PresetBar: React.FC<PresetBarProps> = ({ presets, activePresetId, d
             <button
               type="button"
               className={`${btn} bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25`}
-              onClick={() => (active ? onSave(active.name, active.id) : setNewName(''))}
-              title={active ? `Salvar alterações em "${active.name}"` : 'Salvar como novo preset'}
+              onClick={() => (active ? onSave(active.name, active.id) : onSaveAs ? onSaveAs() : setNewName(''))}
+              title={active
+                ? `Salvar alterações em "${active.name}"${saveTargetLabel(active) ? `\nArquivo: ${saveTargetLabel(active)}` : ''}`
+                : 'Salvar como novo preset'}
             >
               <Save className="w-3.5 h-3.5" /> Salvar
             </button>
             <button
               type="button"
               className={`${btn} bg-gray-800 border-white/10 text-gray-200 hover:bg-gray-700`}
-              onClick={() => setNewName(active ? `${active.name} (cópia)` : '')}
+              onClick={() => (onSaveAs ? onSaveAs() : setNewName(active ? `${active.name.replace(/( \(cópia\))+$/, '')} (cópia)` : ''))}
+              title={onSaveAs ? 'Escolher onde salvar o arquivo .sampler deste preset' : undefined}
             >
               <SaveAll className="w-3.5 h-3.5" /> Salvar como…
             </button>
@@ -72,6 +85,63 @@ export const PresetBar: React.FC<PresetBarProps> = ({ presets, activePresetId, d
             >
               <Trash2 className="w-3.5 h-3.5" /> Excluir
             </button>
+
+            <span className="w-px h-5 bg-white/10" />
+            <button
+              type="button"
+              className={`${btn} bg-gray-800 border-white/10 text-gray-200 hover:bg-gray-700`}
+              onClick={onExport}
+              title="Salvar o que está na tela, com os áudios, num arquivo .sampler (para outro computador ou backup)"
+            >
+              <Download className="w-3.5 h-3.5" /> Exportar
+            </button>
+            <button
+              type="button"
+              className={`${btn} bg-gray-800 border-white/10 text-gray-200 hover:bg-gray-700`}
+              onClick={() => importRef.current?.click()}
+              title="Abrir um arquivo .sampler e adicionar os presets dele"
+            >
+              <FolderOpen className="w-3.5 h-3.5" /> Importar
+            </button>
+            {backupFolder !== undefined && (
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  className={`${btn} max-w-[15rem] ${backupFolder
+                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20'
+                    : 'bg-gray-800 border-white/10 text-gray-200 hover:bg-gray-700'} ${backupFolder ? 'rounded-r-none' : ''}`}
+                  onClick={onChooseBackup}
+                  title={backupFolder
+                    ? `Ao salvar, uma cópia .sampler também vai para:\n${backupFolder}\n\nClique para trocar a pasta.`
+                    : 'Escolher uma pasta (Dropbox, iCloud, pendrive…) onde cada preset salvo também é gravado como .sampler'}
+                >
+                  <FolderSync className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{backupFolder ? `Cópia: ${backupFolder.split(/[\\/]/).pop()}` : 'Pasta de cópia…'}</span>
+                </button>
+                {backupFolder && (
+                  <button
+                    type="button"
+                    title="Parar de gravar cópias"
+                    onClick={() => window.confirm('Parar de gravar uma cópia dos presets nesta pasta? Os arquivos que já estão lá continuam.') && onClearBackup()}
+                    className={`${btn} rounded-l-none border-l-0 bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-red-950/60 hover:text-red-300`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            <input
+              ref={importRef}
+              type="file"
+              accept=".sampler"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = '';
+                if (files.length) onImport(files);
+              }}
+            />
           </div>
         </>
       ) : (

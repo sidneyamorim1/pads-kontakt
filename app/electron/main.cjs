@@ -1,6 +1,7 @@
-// Processo principal do Electron: abre o app React numa janela nativa do macOS.
+// Processo principal do Electron: abre o app React numa janela nativa (macOS e Windows).
 const { app, BrowserWindow, session, shell, Menu } = require('electron');
 const path = require('path');
+const { registerBackupIpc } = require('./backup.cjs');
 
 // Permissões que o app usa: Web MIDI (controlador USB).
 const ALLOWED_PERMISSIONS = new Set(['midi', 'midiSysex']);
@@ -8,6 +9,19 @@ const ALLOWED_PERMISSIONS = new Set(['midi', 'midiSysex']);
 // Mantém a pasta de dados do nome antigo do app, para não perder presets e samples já salvos.
 if (!app.commandLine.hasSwitch('user-data-dir')) {
   app.setPath('userData', path.join(app.getPath('appData'), 'Kontakt 12-Pad Sampler'));
+}
+
+// Uma cópia aberta por vez: duas usando a mesma pasta de dados podem estragar os presets salvos.
+// Abrir de novo só traz a janela que já está aberta para a frente.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  });
 }
 
 // Áudio deve tocar no primeiro clique/tecla/nota MIDI, sem exigir gesto prévio.
@@ -27,6 +41,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.cjs'),
       // Mantém o áudio/MIDI responsivo mesmo com a janela em segundo plano.
       backgroundThrottling: false,
     },
@@ -49,6 +64,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  registerBackupIpc();
   const ses = session.defaultSession;
   ses.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(ALLOWED_PERMISSIONS.has(permission));
@@ -58,9 +74,9 @@ app.whenReady().then(() => {
   ses.setPermissionCheckHandler((_wc, permission) =>
     ALLOWED_PERMISSIONS.has(permission) || permission === 'media' || permission === 'speaker-selection');
 
-  // Menu padrão do macOS (Copiar/Colar, Fechar com Cmd+W, Sair com Cmd+Q, etc.).
+  // Menu padrão (Copiar/Colar, Fechar, Sair). No macOS o primeiro menu é o do app; no Windows, "Arquivo".
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    { role: 'appMenu' },
+    { role: process.platform === 'darwin' ? 'appMenu' : 'fileMenu' },
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { role: 'windowMenu' },

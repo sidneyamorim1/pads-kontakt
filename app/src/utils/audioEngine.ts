@@ -17,6 +17,12 @@ export interface PadData {
   customFileName?: string;
   customSampleId?: string; // referência ao arquivo salvo no presetStore
   playToEnd?: boolean; // card lateral: toca o áudio inteiro; clicar de novo reinicia
+  // Ajustes dos cards laterais
+  loop?: boolean;      // repete até ser parado
+  fadeIn?: number;     // segundos
+  fadeOut?: number;    // segundos: ao parar e no fim do áudio
+  exclusive?: boolean; // "um por vez": ao tocar, para os outros cards com esta opção
+  retrigger?: 'restart' | 'stop'; // tocar de novo enquanto toca: reinicia (padrão) ou para
 }
 
 // Áudio de um card lateral que está tocando
@@ -24,6 +30,8 @@ interface FullVoice {
   gain: GainNode;
   source: AudioBufferSourceNode | null; // null = som sintetizado (sem sample carregado)
   timer?: number;
+  fadeOut: number;
+  exclusive: boolean;
 }
 
 // Grupos de saída: os 12 pads e os cards de áudio podem ir para canais diferentes da placa/mesa
@@ -62,16 +70,16 @@ class AudioEngine {
     for (const padId of Array.from(this.fullVoices.keys())) this.stopFull(padId);
   }
 
-  // Para um card lateral com um fade curto (evita estalo)
-  public stopFull(padId: number, fade: number = 0.04) {
+  // Para um card lateral com o fade out dele (no mínimo um fade curto, que evita estalo)
+  public stopFull(padId: number, fade?: number) {
     const voice = this.fullVoices.get(padId);
     if (!voice || !this.ctx) return;
     const now = this.ctx.currentTime;
-    const end = now + fade;
+    const end = now + (fade ?? Math.max(voice.fadeOut, 0.04));
     const g = voice.gain.gain;
     g.cancelScheduledValues(now);
-    g.setValueAtTime(Math.max(g.value, 0.0001), now);
-    g.exponentialRampToValueAtTime(0.0001, end);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(0, end); // linear: em fades longos o som não some de repente
     voice.source?.stop(end + 0.005);
     this.endFull(padId, voice);
   }
@@ -255,18 +263,27 @@ class AudioEngine {
     }
   }
 
-  // Card lateral: toca o áudio inteiro (sem cortar no release); se já estava tocando, reinicia do começo
+  // Card lateral: toca o áudio inteiro (sem cortar no release).
+  // Se já estava tocando, reinicia do começo ou para, conforme `retrigger`.
   private playFull(pad: PadData, velocity: number) {
     const ctx = this.ctx!;
+    if (this.fullVoices.has(pad.id) && pad.retrigger === 'stop') {
+      this.stopFull(pad.id);
+      return;
+    }
     this.stopFull(pad.id, 0.005);
+    if (pad.exclusive) {
+      for (const [id, v] of Array.from(this.fullVoices)) if (v.exclusive) this.stopFull(id);
+    }
 
     const now = ctx.currentTime;
-    const attack = pad.attack || 0.005;
+    const attack = Math.max(pad.fadeIn ?? 0, pad.attack || 0.005);
     const release = pad.release || 0.3;
+    const fadeOut = pad.fadeOut ?? 0;
     const gain = ctx.createGain();
     const vol = Math.max((pad.volume / 100) * Math.max(0.1, Math.min(1.0, velocity)), 0.0002);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(vol, now + attack);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + attack);
     if (!pad.customBuffer) gain.gain.exponentialRampToValueAtTime(0.0001, now + attack + release);
 
     const panner = ctx.createStereoPanner();
@@ -282,11 +299,18 @@ class AudioEngine {
       sendGain.connect(bus.reverb);
     }
 
-    const voice: FullVoice = { gain, source: null };
+    const voice: FullVoice = { gain, source: null, fadeOut, exclusive: !!pad.exclusive };
     this.fullVoices.set(pad.id, voice);
     if (pad.customBuffer) {
       voice.source = this.playBuffer(pad.customBuffer, panner, pad, now);
+      voice.source.loop = !!pad.loop;
       voice.source.onended = () => this.endFull(pad.id, voice);
+      // Sem loop, o fade out também acontece no fim do áudio
+      const duration = pad.customBuffer.duration / Math.pow(2, pad.pitch / 12);
+      if (!pad.loop && fadeOut > 0 && duration > attack + fadeOut) {
+        gain.gain.setValueAtTime(vol, now + duration - fadeOut);
+        gain.gain.linearRampToValueAtTime(0, now + duration);
+      }
     } else {
       this.synthesizeSound(pad, panner, now);
       voice.timer = window.setTimeout(() => this.endFull(pad.id, voice), (attack + release) * 1000);

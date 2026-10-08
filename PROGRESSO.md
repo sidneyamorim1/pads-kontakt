@@ -1,6 +1,6 @@
 # Kontakt 12-Pad Sampler — Progresso
 
-Última atualização: 06/10/2026
+Última atualização: 08/10/2026
 
 ## Onde estão as coisas
 
@@ -160,3 +160,68 @@ Discutido em 07/10/2026. **Por enquanto o controlador fica sem LEDs e sem integr
 - Opção recomendada: botões arcade translúcidos de 30 mm, com um LED RGB WS2812 dentro de cada um. Os 21 LEDs ficam em cadeia, ligados num pino só (ex.: GP22) e alimentados pelo VBUS de 5 V, com o brilho limitado no código por causa da corrente do USB. Cada botão acende na cor do pad da tela.
 - Comportamento sugerido: o app manda MIDI de volta para a placa ("Sampler Studio Pads"). Os pads piscam a cada disparo, e os cards de áudio ficam acesos enquanto tocam. Para isso, o app precisa enviar MIDI out.
 - Alternativa: botões com LED embutido de **5 V** (não 12 V). Exigem 21 fios extras e 3 chips 74HCT595 ou drivers.
+
+---
+
+## 08/10/2026 — Versão Windows, exportar/importar, MIDI Learn e ajustes dos cards
+
+### Versão Windows
+- `npm run dist:win` gera `release/Sampler Studio Setup 1.0.0.exe` (instalador) e `release/Sampler Studio 1.0.0 Portatil.exe` (abre sem instalar). Windows 10/11, 64 bits.
+- No Windows o primeiro menu é "Arquivo" (no Mac continua o menu do app), em `electron/main.cjs`.
+- Sem assinatura: o SmartScreen avisa na primeira vez (Mais informações > Executar assim mesmo). **Ainda não testado num PC com Windows.**
+- O `.dmg` Intel foi instalado e testado neste Mac (macOS 13.7): funcionou.
+
+### Exportar / importar presets (arquivo `.sampler`)
+- Botões **Exportar** e **Importar** na barra de presets.
+- Exportar salva o que está na tela (pads, cards e os áudios carregados) num arquivo `.sampler`, com o nome do preset aberto. Serve para levar kits entre Mac e Windows e como backup.
+- Importar aceita um ou vários arquivos. Cada preset é adicionado à lista (nome repetido vira "Nome (2)") e o primeiro é aberto.
+- Formato em `src/utils/presetFile.ts`: "SMPLSTD1" + cabeçalho JSON + áudios originais. O cabeçalho aceita vários presets, para um futuro "exportar todos".
+- **Testado:** exportar e importar num perfil vazio (como outro computador). O preset e o áudio voltaram. Arquivos inválidos ou cortados são recusados com aviso.
+- Exportação conferida também pelo usuário (08/10/2026).
+
+### MIDI Learn
+- Botão **MIDI Learn** no topo. Clique num pad ou card e aperte o botão do controlador. O próximo pad é escolhido sozinho (12 pads e depois os cards, na ordem da tela). Esc ou "Concluir" sai.
+- Se o botão já era de outro pad, os dois trocam. "Restaurar padrão" volta às notas 36 a 56.
+- Aceita nota e CC. O mapeamento fica salvo **no computador** (`localStorage`, `src/utils/midiMap.ts`), não no preset, porque o controlador é o mesmo para todos os presets.
+- O leitor MIDI agora é registrado uma vez só. Antes, ele era refeito a cada mudança nos pads.
+- O `MidiWizardModal.tsx` (assistente antigo de 8 pads, que não era usado) foi removido.
+- **Testado pelo usuário com controlador de verdade (08/10/2026): funcionou.**
+
+### Ajustes dos cards de áudio
+- Cada card tem um botão de ajustes (ícone de controles) com:
+  - **Repetir (loop)**;
+  - **Fade in** e **fade out** de 0 a 10 s. O fade out acontece ao parar e no fim do áudio. As curvas são lineares;
+  - **Um por vez**: ao tocar, para os outros cards que também têm esta opção. Um fundo em loop sem a opção continua tocando;
+  - **Tocar de novo enquanto toca**: reinicia (padrão) ou para. "Para" deixa ligar e desligar um loop pelo controlador físico.
+- O rodapé do card mostra os ajustes ligados (ex.: "Loop · 1 por vez").
+- Os ajustes entram na sessão e nos presets. Código: `playFull`/`stopFull` em `audioEngine.ts` e `CardSettingsPanel.tsx`.
+- **Testado** no motor de áudio do app: loop, fim natural, reiniciar, parar, um por vez, fade in e fade out.
+
+### Modo edição e remover áudio
+- Botão **Editar** no topo. Fora dele os cards ficam limpos para tocar ao vivo: só o pad e, nos cards de áudio, o "Parar".
+- No modo edição aparecem: **Som** (carregar), **✕** (remover áudio, só quando há um carregado), **ajustes** (cards de áudio) e o campo de renomear. Arrastar arquivos para os pads também só funciona no modo edição.
+- Remover pede confirmação e o pad volta ao som interno. O arquivo sai do armazenamento quando nenhum preset usa mais (limpeza ao excluir presets).
+- O app sempre abre fora do modo edição.
+- O nome do controlador MIDI no topo é cortado em nomes longos (o nome inteiro aparece ao passar o mouse), para o topo caber numa linha.
+- **Testado:** botões escondidos e visíveis nos dois modos, remover num pad e num card.
+
+### Pasta de cópia dos presets (só no app instalado)
+- Botão **Pasta de cópia…** na barra de presets. Escolhida a pasta (Dropbox, iCloud, pendrive…), cada **Salvar** também grava `<nome do preset>.sampler` nela, substituindo a cópia anterior do mesmo preset. O botão vira "Cópia: <pasta>" e o ✕ desliga a cópia.
+- O salvamento automático da sessão não gera cópia, só o Salvar.
+- Se a pasta não estiver disponível (ex.: pendrive removido), o preset é salvo no app normalmente e aparece um aviso.
+- Electron: `electron/preload.cjs` (ponte) e `electron/backup.cjs`. A pasta fica guardada em `backup-folder.json`, na pasta de dados do app. A página só consegue gravar arquivos `.sampler` dentro dessa pasta.
+- No navegador (`npm run dev`) o botão não aparece.
+- **Testado** no Electron com a ponte real: a cópia é gravada e o aviso aparece quando a pasta não existe. A janela de escolher pasta (do sistema) não foi testada automaticamente.
+
+### "Salvar como…" com a janela do sistema (app instalado e Chrome)
+- **Salvar como…** (e **Salvar** sem preset aberto) abre a janela de salvar do Mac/Windows. Você escolhe a pasta e o nome. O app grava o `.sampler` ali e cria o preset com o nome do arquivo.
+- O preset fica **ligado ao arquivo** (`filePath` no preset): cada **Salvar** depois atualiza o mesmo arquivo. Passar o mouse no Salvar mostra o caminho.
+- A janela abre na última pasta usada (ou na pasta de cópia, ou em Documentos). Se já existir no app um preset com o mesmo nome, pergunta antes de substituir.
+- Segurança: o processo principal só grava nos arquivos escolhidos na janela (lista em `saved-files.json`, na pasta de dados).
+- **No Chrome/Edge (localhost)** também abre a janela do sistema, pela File System Access API (`src/utils/fileSave.ts`). O preset guarda o "handle" do arquivo. Depois de reabrir o navegador, o primeiro Salvar pede permissão para gravar no arquivo. Em navegadores sem essa API (Safari, Firefox) continua o campo de digitar o nome. **Testado pelo usuário no Chrome: funcionou.**
+- Corrigido: o "Salvar como…" acumulava "(cópia) (cópia) (cópia)" no nome. Agora a janela sugere o nome do preset aberto, e o campo de digitar põe no máximo um "(cópia)".
+- **Testado** no Electron, com a janela simulada: o arquivo é criado, o Salvar seguinte atualiza o arquivo e a gravação fora do permitido é recusada.
+
+### Uma cópia do app por vez
+- `electron/main.cjs` usa `requestSingleInstanceLock`. Abrir o app de novo só traz a janela aberta para a frente. Motivo: o app instalado e o `npm run app` usam a mesma pasta de dados, e duas cópias abertas ao mesmo tempo podem estragar os presets. **Testado.**
+- Atenção: o Sampler Studio instalado hoje ainda é da versão antiga, sem essa trava. Feche-o antes de rodar `npm run app`.

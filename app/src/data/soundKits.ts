@@ -21,6 +21,9 @@ const SIDE_PAD_DEFAULTS: Pick<PadData, 'name' | 'category'>[] = [
   { name: 'Áudio 8', category: 'perc' },
   { name: 'Áudio 9', category: 'fx' },
 ];
+// Ordem na tela (3 colunas x 3 linhas): os cards 7, 8 e 9 (ids 19-21) ocupam a 3ª coluna
+export const SIDE_LAYOUT = [13, 14, 19, 15, 16, 20, 17, 18, 21];
+
 // Áudio 7, 8 e 9 ficam na 3ª coluna: teclas U / J / M (à direita de Y / H / N)
 const SIDE_PAD_KEYS = ['t', 'y', 'g', 'h', 'b', 'n', 'u', 'j', 'm'];
 const SIDE_PAD_COLORS = ['#e879f9', '#c084fc', '#f472b6', '#a78bfa', '#fb7185', '#d946ef', '#f0abfc', '#818cf8', '#f9a8d4'];

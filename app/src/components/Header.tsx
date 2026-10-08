@@ -1,5 +1,5 @@
 import React from 'react';
-import { Radio, Disc3, Volume2, Speaker } from 'lucide-react';
+import { Radio, Disc3, Volume2, Speaker, Cable, Pencil } from 'lucide-react';
 import { SoundKit } from '../data/soundKits';
 
 interface HeaderProps {
@@ -9,6 +9,10 @@ interface HeaderProps {
   midiConnected: boolean;
   midiDeviceName: string | null;
   onRequestMidiAccess: () => void;
+  learnMode: boolean;
+  onToggleLearn: () => void;
+  editMode: boolean;
+  onToggleEdit: () => void;
   masterVolume: number;
   onSetMasterVolume: (volume: number) => void;
   outputLabel: string;
@@ -22,6 +26,10 @@ export const Header: React.FC<HeaderProps> = ({
   midiConnected,
   midiDeviceName,
   onRequestMidiAccess,
+  learnMode,
+  onToggleLearn,
+  editMode,
+  onToggleEdit,
   masterVolume,
   onSetMasterVolume,
   outputLabel,
@@ -77,12 +85,42 @@ export const Header: React.FC<HeaderProps> = ({
               : 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/50'
           }`}
         >
-          <Radio className={`w-3.5 h-3.5 ${midiConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400 animate-bounce'}`} />
-          <span>
+          <Radio className={`w-3.5 h-3.5 shrink-0 ${midiConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400 animate-bounce'}`} />
+          <span className="truncate max-w-[13rem]" title={midiDeviceName ?? undefined}>
             {midiConnected 
               ? `MIDI: ${midiDeviceName || 'Conectado'}` 
               : 'Clique para Conectar MIDI'}
           </span>
+        </button>
+
+        {/* Modo edição: mostra nos cards os botões de áudio, ajustes e renomear */}
+        <button
+          type="button"
+          onClick={onToggleEdit}
+          title="Mostrar nos pads e cards os botões para trocar ou remover áudio, ajustar e renomear"
+          className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 text-xs font-mono transition-all cursor-pointer active:scale-95 ${
+            editMode
+              ? 'bg-amber-500/25 border-amber-400/60 text-amber-200'
+              : 'bg-black/40 border-white/10 text-gray-200 hover:border-amber-400/50'
+          }`}
+        >
+          <Pencil className="w-3.5 h-3.5 text-amber-400" />
+          <span>{editMode ? 'Editando' : 'Editar'}</span>
+        </button>
+
+        {/* MIDI Learn: liga cada pad a um botão do controlador */}
+        <button
+          type="button"
+          onClick={onToggleLearn}
+          title="Ligar cada pad e card a um botão do seu controlador MIDI"
+          className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 text-xs font-mono transition-all cursor-pointer active:scale-95 ${
+            learnMode
+              ? 'bg-cyan-500/25 border-cyan-400/60 text-cyan-200'
+              : 'bg-black/40 border-white/10 text-gray-200 hover:border-cyan-400/50'
+          }`}
+        >
+          <Cable className="w-3.5 h-3.5 text-cyan-400" />
+          <span>MIDI Learn</span>
         </button>
 
         {/* Saída de áudio (placa / canais) */}

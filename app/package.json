@@ -10,7 +10,8 @@
     "app": "npm run build && electron .",
     "dist": "npm run build && electron-builder --mac --arm64",
     "dist:universal": "npm run build && electron-builder --mac --universal",
-    "dist:intel": "npm run build && electron-builder --mac --x64"
+    "dist:intel": "npm run build && electron-builder --mac --x64",
+    "dist:win": "npm run build && electron-builder --win --x64"
   },
   "dependencies": {},
   "devDependencies": {
@@ -62,6 +63,20 @@
       "extendInfo": {
         "NSBluetoothAlwaysUsageDescription": "Para conectar controladores MIDI via Bluetooth."
       }
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName} Setup ${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName} ${version} Portatil.${ext}"
     }
   }
 }
