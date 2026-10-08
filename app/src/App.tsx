@@ -82,6 +82,7 @@ export function App() {
     const kit = SOUND_KITS.find(k => k.id === kitId);
     if (kit) {
       audioEngine.stopAllFull();
+      audioEngine.stopAllPads();
       setActiveKitId(kit.id);
       setPads(kit.pads);
       setSelectedPadId(1);
@@ -145,6 +146,7 @@ export function App() {
     const preset = await presetStore.getPreset(id);
     if (!preset) return;
     audioEngine.stopAllFull();
+    audioEngine.stopAllPads();
     setActiveKitId(preset.kitId);
     setPads(withSidePads(await hydratePads(preset.pads)));
     setActivePresetId(preset.id);
@@ -280,8 +282,11 @@ export function App() {
     }
     const sampleId = crypto.randomUUID();
     await presetStore.putSample({ id: sampleId, fileName: file.name, data });
+    // O pad passa a ter o nome do arquivo (sem a extensão); dá para renomear depois no modo edição
+    const soundName = file.name.replace(/\.[^.]+$/, '') || file.name;
     setPads(prev => prev.map(p => p.id === padId ? {
       ...p,
+      name: soundName,
       customBuffer: buffer,
       customFileName: file.name,
       customSampleId: sampleId
@@ -510,8 +515,9 @@ export function App() {
           activePadStates={activePadStates}
           playingPads={playingPads}
           onTriggerPad={triggerPad}
-          onStopPad={(padId) => audioEngine.stopFull(padId)}
+          onStopPad={(padId) => (padId > 12 ? audioEngine.stopFull(padId) : audioEngine.stopPad(padId))}
           onStopAllSide={() => audioEngine.stopAllFull()}
+          onStopAllMain={() => audioEngine.stopAllPads()}
           onSelectPad={(pad) => setSelectedPadId(pad.id)}
           onUploadSample={handleUploadSample}
           onRemoveSample={handleRemoveSample}

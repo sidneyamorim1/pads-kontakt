@@ -11,6 +11,7 @@ interface PadHardwareProps {
   onTriggerPad: (pad: PadData) => void;
   onStopPad: (padId: number) => void;
   onStopAllSide: () => void;
+  onStopAllMain: () => void;
   onSelectPad: (pad: PadData) => void;
   onUploadSample: (padId: number, file: File) => void;
   onRemoveSample: (padId: number) => void;
@@ -31,7 +32,7 @@ function cardModeLabel(pad: PadData): string {
     pad.loop && 'Loop',
     pad.exclusive && '1 por vez',
     (pad.fadeIn || pad.fadeOut) && 'Fade',
-    pad.retrigger === 'stop' && 'Liga/desliga',
+    pad.retrigger === 'restart' && 'Reinicia',
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : 'Até o fim';
 }
@@ -44,6 +45,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
   onTriggerPad,
   onStopPad,
   onStopAllSide,
+  onStopAllMain,
   onSelectPad,
   onUploadSample,
   onRemoveSample,
@@ -80,7 +82,9 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
 
   // `side` = card lateral (toca até o fim): acende enquanto o áudio toca e usa a cor rosa/violeta
   const renderPad = (pad: PadData, side: boolean) => {
-    const isActive = !!activePadStates[pad.id] || (side && !!playingPads[pad.id]);
+    // Acende enquanto toca: cards sempre; pads quando têm áudio carregado (toca até o fim)
+    const canStop = side || !!pad.customFileName;
+    const isActive = !!activePadStates[pad.id] || (canStop && !!playingPads[pad.id]);
     const isSelected = activePadId === pad.id;
     const isLearnTarget = learnMode && learnPadId === pad.id;
     const selectedBorder = side
@@ -138,8 +142,8 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             </button>
           )}
 
-          {/* Parar o áudio do card lateral */}
-          {side && (
+          {/* Parar o áudio (cards e pads com áudio carregado) */}
+          {canStop && (
             <button
               type="button"
               title="Parar este áudio"
@@ -222,7 +226,7 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
               ? <PlayCircle className={`w-4 h-4 mb-1 transition-transform ${isActive ? 'scale-125 text-fuchsia-200' : 'text-fuchsia-300'}`} />
               : <Music className={`w-4 h-4 mb-1 transition-transform ${isActive ? 'scale-125 text-cyan-300' : 'text-gray-300'}`} />}
 
-            <span className="text-[10px] sm:text-xs font-bold text-white truncate max-w-full leading-tight">
+            <span className="text-[10px] sm:text-xs font-bold text-white max-w-full leading-tight line-clamp-2 break-words" title={pad.name}>
               {pad.name}
             </span>
 
@@ -232,7 +236,8 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
               </span>
             )}
 
-            {!learnMode && pad.customFileName && (
+            {/* Nome do arquivo só quando o pad foi renomeado para outra coisa */}
+            {!learnMode && pad.customFileName && pad.customFileName.replace(/\.[^.]+$/, '') !== pad.name && (
               <span className={`hidden sm:block text-[9px] font-mono truncate max-w-full mt-0.5 ${side ? 'text-fuchsia-300' : 'text-emerald-400'}`}>
                 {pad.customFileName}
               </span>
@@ -283,6 +288,15 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
             <span className="text-white font-bold tracking-wider uppercase text-xs">CONTROLADOR DE 12 PADS TÁTEIS</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onStopAllMain}
+              disabled={!mainPads.some(p => playingPads[p.id])}
+              title="Parar os áudios que estão tocando nos 12 pads"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 text-red-300 font-sans font-semibold text-[10px] tracking-normal transition-all active:scale-95 cursor-pointer disabled:opacity-30 disabled:cursor-default disabled:active:scale-100"
+            >
+              <Square className="w-3 h-3 fill-current" /> Parar todos
+            </button>
             <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-500/30 flex items-center gap-1.5 font-sans font-semibold">
               <MousePointerClick className="w-3.5 h-3.5 text-cyan-400" /> {editMode ? 'Modo edição: arraste áudios para os pads' : 'Clique no mouse ou use o teclado / MIDI'}
             </span>

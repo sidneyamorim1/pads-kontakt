@@ -22,7 +22,7 @@ export interface PadData {
   fadeIn?: number;     // segundos
   fadeOut?: number;    // segundos: ao parar e no fim do áudio
   exclusive?: boolean; // "um por vez": ao tocar, para os outros cards com esta opção
-  retrigger?: 'restart' | 'stop'; // tocar de novo enquanto toca: reinicia (padrão) ou para
+  retrigger?: 'restart' | 'stop'; // tocar de novo enquanto toca: para (padrão) ou reinicia
 }
 
 // Áudio de um card lateral que está tocando
@@ -58,6 +58,8 @@ class AudioEngine {
   private buses: Record<BusName, Bus> | null = null;
   private reversedCache: WeakMap<AudioBuffer, AudioBuffer> = new WeakMap();
   private fullVoices: Map<number, FullVoice> = new Map();
+  // Áudios carregados tocando nos 12 pads (tocar de novo sobrepõe, então pode haver vários por pad)
+  private padVoices: Map<number, Set<{ gain: GainNode; source: AudioBufferSourceNode }>> = new Map();
   private playingListener: ((padId: number, playing: boolean) => void) | null = null;
 
   // Avisa a interface quando um card lateral começa ou termina de tocar
@@ -82,6 +84,26 @@ class AudioEngine {
     g.linearRampToValueAtTime(0, end); // linear: em fades longos o som não some de repente
     voice.source?.stop(end + 0.005);
     this.endFull(padId, voice);
+  }
+
+  // Para o áudio carregado de um dos 12 pads (todas as vezes que ele está tocando)
+  public stopPad(padId: number, fade: number = 0.04) {
+    const voices = this.padVoices.get(padId);
+    if (!voices || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    for (const { gain, source } of voices) {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(0, now + fade);
+      source.onended = null;
+      source.stop(now + fade + 0.005);
+    }
+    this.padVoices.delete(padId);
+    this.playingListener?.(padId, false);
+  }
+
+  public stopAllPads() {
+    for (const padId of Array.from(this.padVoices.keys())) this.stopPad(padId);
   }
 
   private endFull(padId: number, voice: FullVoice) {
@@ -241,6 +263,12 @@ class AudioEngine {
       return;
     }
 
+    // Pad com áudio carregado: tocar de novo enquanto toca para o áudio
+    if (pad.customBuffer && this.padVoices.has(pad.id) && pad.retrigger !== 'restart') {
+      this.stopPad(pad.id);
+      return;
+    }
+
     const now = this.ctx.currentTime;
     const velFactor = Math.max(0.1, Math.min(1.0, velocity));
 
@@ -248,12 +276,12 @@ class AudioEngine {
     const padGain = this.ctx.createGain();
     const padVol = (pad.volume / 100) * velFactor;
     
-    // Envelope
+    // Envelope. Áudio carregado toca inteiro; o release só corta os sons internos (sintetizados)
     const attack = pad.attack || 0.005;
     const release = pad.release || 0.3;
     padGain.gain.setValueAtTime(0.0001, now);
-    padGain.gain.exponentialRampToValueAtTime(padVol, now + attack);
-    padGain.gain.exponentialRampToValueAtTime(0.0001, now + attack + release);
+    padGain.gain.exponentialRampToValueAtTime(Math.max(padVol, 0.0002), now + attack);
+    if (!pad.customBuffer) padGain.gain.exponentialRampToValueAtTime(0.0001, now + attack + release);
 
     // Pan
     const panner = this.ctx.createStereoPanner();
@@ -273,17 +301,30 @@ class AudioEngine {
     // Play custom buffer or synthetic sound
     const customBuf = pad.customBuffer;
     if (customBuf) {
-      this.playBuffer(customBuf, panner, pad, now);
+      // Toca até o fim do áudio (para sozinho); o botão Parar interrompe antes
+      const source = this.playBuffer(customBuf, panner, pad, now);
+      const voice = { gain: padGain, source };
+      const voices = this.padVoices.get(pad.id) ?? new Set();
+      voices.add(voice);
+      this.padVoices.set(pad.id, voices);
+      if (voices.size === 1) this.playingListener?.(pad.id, true);
+      source.onended = () => {
+        voices.delete(voice);
+        if (voices.size === 0 && this.padVoices.get(pad.id) === voices) {
+          this.padVoices.delete(pad.id);
+          this.playingListener?.(pad.id, false);
+        }
+      };
     } else {
       this.synthesizeSound(pad, panner, now);
     }
   }
 
   // Card lateral: toca o áudio inteiro (sem cortar no release).
-  // Se já estava tocando, reinicia do começo ou para, conforme `retrigger`.
+  // Se já estava tocando, para (padrão) ou reinicia do começo, conforme `retrigger`.
   private playFull(pad: PadData, velocity: number) {
     const ctx = this.ctx!;
-    if (this.fullVoices.has(pad.id) && pad.retrigger === 'stop') {
+    if (this.fullVoices.has(pad.id) && pad.retrigger !== 'restart') {
       this.stopFull(pad.id);
       return;
     }

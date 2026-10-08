@@ -245,3 +245,18 @@ Discutido em 07/10/2026. **Por enquanto o controlador fica sem LEDs e sem integr
 - No Chrome, o som fica bloqueado até o primeiro clique ou tecla na página. Nota MIDI não conta, então o controlador não toca logo depois de abrir ou recarregar a página. Era isso que fazia o MIDI "só funcionar depois de clicar no preset".
 - Agora aparece uma faixa laranja "Som bloqueado pelo navegador…" enquanto o som estiver bloqueado, e qualquer clique ou tecla libera o som (`isSuspended`/`resume` em `audioEngine.ts`).
 - No app instalado isso não acontece (`autoplay-policy` em `main.cjs`), e a faixa não aparece. O usuário vai usar só o app.
+
+### Nome do som no card
+- Ao carregar um áudio, o pad ou card passa a ter o nome do arquivo, sem a extensão (ex.: "Hino de Abertura.mp3" → "Hino de Abertura"). Dá para renomear depois no modo Editar.
+- O nome do arquivo em letra pequena só aparece se o pad foi renomeado para outra coisa (para não repetir).
+- Nomes longos ocupam até duas linhas. O nome completo aparece ao passar o mouse.
+- Áudios carregados antes desta mudança continuam com o nome antigo. Para atualizar, carregue o áudio de novo ou renomeie no modo Editar.
+- **Testado** com um nome curto e com um longo.
+
+### Áudio carregado num pad toca inteiro
+- Antes, nos 12 pads, o "release" do pad cortava também o áudio carregado (ex.: PAD 1 = 0,4 s). O "Aplausos.wav" do usuário começa baixo e só cresce depois de 0,4 s, então não se ouvia nada.
+- Agora um áudio carregado num pad toca até o fim. O release só vale para os sons internos (sintetizados). Tocar de novo sobrepõe, como num pad de bateria. Para sons longos que precisam de Parar, loop ou fade, o lugar certo continua sendo os cards de Áudios.
+- **Testado** com o `Aplausos.wav` no PAD 1: o som continua audível em 1 s e em 5 s.
+- **Parar nos pads:** pads com áudio carregado ganharam o botão **■ Parar** (ativo só enquanto toca) e acendem enquanto tocam. O painel dos 12 pads ganhou **Parar todos**, que para só os pads. Ao chegar ao fim, o áudio para sozinho. Trocar de kit ou de preset para tudo. Pads com som interno não têm Parar, porque são sons curtos.
+- **Testado:** Parar, Parar todos com o pad tocado 2 vezes por cima, e fim natural do áudio.
+- **Clicar de novo para:** em pads com áudio carregado, o primeiro toque toca e o segundo para (mouse, teclado e MIDI). Nos cards de Áudios o padrão também passou a ser "para". A opção "Tocar de novo enquanto toca → Reinicia" continua nos ajustes do card, e o rodapé mostra "Reinicia" quando ela está ligada. Cards salvos antes com "Reinicia" escolhido de propósito continuam assim. **Testado.**

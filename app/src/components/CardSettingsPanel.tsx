@@ -34,7 +34,7 @@ export const CardSettingsPanel: React.FC<CardSettingsPanelProps> = ({ pad, onClo
   );
 
   const row = 'flex items-center justify-between gap-4 border-t border-white/5';
-  const retrigger = pad.retrigger ?? 'restart';
+  const retrigger = pad.retrigger ?? 'stop';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center" onClick={onClose}>
@@ -76,7 +76,7 @@ export const CardSettingsPanel: React.FC<CardSettingsPanelProps> = ({ pad, onClo
         <div className={row} style={{ paddingTop: 12 }}>
           <div>
             <div className="text-sm text-gray-200">Tocar de novo enquanto toca</div>
-            <div className="text-[11px] text-gray-500">"Parar" é útil no controlador físico, que não tem botão de parar.</div>
+            <div className="text-[11px] text-gray-500">"Para": o mesmo botão liga e desliga (também no controlador).</div>
           </div>
           <div className="flex shrink-0 rounded-md overflow-hidden border border-white/10">
             {(['restart', 'stop'] as const).map(mode => (
