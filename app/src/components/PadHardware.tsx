@@ -127,8 +127,8 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
-          {/* Ajustes do card lateral (loop, fades, um por vez) */}
-          {side && editMode && (
+          {/* Ajustes do áudio (loop, fades, um por vez): cards e pads com áudio carregado */}
+          {canStop && editMode && (
             <button
               type="button"
               title="Ajustes deste áudio: loop, fade, um por vez"
@@ -246,9 +246,9 @@ export const PadHardware: React.FC<PadHardwareProps> = ({
 
           {/* Number Label */}
           <div className="w-full flex justify-between items-center text-gray-400 text-[9px] font-mono">
-            <span className={`hidden sm:flex items-center gap-1 text-[8px] truncate ${side && cardModeLabel(pad) !== 'Até o fim' ? 'text-fuchsia-300' : 'text-gray-500'}`}>
-              {side && pad.loop && <Repeat className="w-2.5 h-2.5 shrink-0" />}
-              {side ? cardModeLabel(pad) : 'Clique'}
+            <span className={`hidden sm:flex items-center gap-1 text-[8px] truncate ${canStop && cardModeLabel(pad) !== 'Até o fim' ? (side ? 'text-fuchsia-300' : 'text-amber-300') : 'text-gray-500'}`}>
+              {canStop && pad.loop && <Repeat className="w-2.5 h-2.5 shrink-0" />}
+              {canStop ? cardModeLabel(pad) : 'Clique'}
             </span>
             <span className={`ml-auto text-xs font-bold ${side ? 'text-fuchsia-200 uppercase' : 'text-gray-200 group-hover:text-amber-400'}`}>
               {side ? pad.keyTrigger : pad.id}

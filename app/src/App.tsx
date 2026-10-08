@@ -515,7 +515,7 @@ export function App() {
           activePadStates={activePadStates}
           playingPads={playingPads}
           onTriggerPad={triggerPad}
-          onStopPad={(padId) => (padId > 12 ? audioEngine.stopFull(padId) : audioEngine.stopPad(padId))}
+          onStopPad={(padId) => audioEngine.stopFull(padId)}
           onStopAllSide={() => audioEngine.stopAllFull()}
           onStopAllMain={() => audioEngine.stopAllPads()}
           onSelectPad={(pad) => setSelectedPadId(pad.id)}
